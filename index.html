@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Таймер возвращения Кота</title>
   <style>
     :root {
       --bg-color: #f2f2f2;
       --text-color: #333;
       --card-bg: #fff;
-      /* --link-color уже не используется, теперь используется --text-color */
     }
     body.dark {
       --bg-color: #121212;
@@ -36,6 +35,18 @@
       flex-direction: column;
       padding: 20px;
     }
+    .mode-toggle {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: background 0.3s, color 0.3s;
+    }
     .header {
       font-size: 1.8rem;
       margin-bottom: 20px;
@@ -44,155 +55,197 @@
       background: var(--card-bg);
       padding: 20px 40px;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       font-size: 2rem;
-      margin-bottom: 40px;
       transition: background 0.3s;
     }
-    .telegram-link {
-      text-align: center;
-      padding: 20px;
-    }
-    .telegram-link a {
-      text-decoration: none;
-      /* Используем текстовый цвет, который меняется при смене темы */
-      color: var(--text-color);
-      display: inline-flex;
-      align-items: center;
-      transition: color 0.3s;
-    }
-    .telegram-link a:hover .telegram-logo {
-      transform: scale(1.1);
-    }
-    /* Стили для новой иконки Telegram, которая теперь выводится через img */
-    .telegram-logo {
-      width: 24px;
-      height: 24px;
-      transition: transform 0.2s;
-    }
-    .telegram-text {
-      margin-left: 6px;
-      font-size: 0.9rem;
-    }
-    .theme-toggle {
+    .theme-toggle,
+    .display-toggle {
       position: fixed;
       top: 10px;
-      right: 10px;
       background: var(--card-bg);
       border: none;
       border-radius: 4px;
-      padding: 8px 12px;
+      padding: 6px 10px;
       cursor: pointer;
-      font-size: 1rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       transition: background 0.3s, color 0.3s;
       color: var(--text-color);
+    }
+    .theme-toggle {
+      right: 10px;
+    }
+    .display-toggle {
+      right: 140px;
+    }
+    .social-icons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      padding: 20px;
+    }
+    .icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .icon:hover {
+      transform: scale(1.2);
     }
   </style>
 </head>
 <body>
-  <!-- Кнопка переключения темы -->
   <button class="theme-toggle" id="themeToggle">Светлая тема</button>
+  <button class="display-toggle" id="displayToggle">Точное время</button>
 
   <div class="container">
-    <div class="header">До возвращения Кота осталось:</div>
-    <div class="timer" id="timer">
-      Загрузка таймера...
-    </div>
+    <div class="header" id="modeHeader">До возвращения Кота осталось:</div>
+    <div class="timer" id="timer">Загрузка таймера...</div>
+    <button class="mode-toggle" id="modeToggle">Время с ухода</button>
   </div>
-  <div class="telegram-link">
-    <a href="https://t.me/KotvSapozhke" target="_blank">
-      <!-- Иконка Telegram через img -->
-      <img class="telegram-logo" src="https://upload.wikimedia.org/wikipedia/commons/8/83/Telegram_2019_Logo.svg" alt="Telegram Logo">
-      <span class="telegram-text">telegram</span>
-    </a>
-  </div>
+
+<div class="social-icons">
+  <a href="https://t.me/KotvSapozhke" target="_blank" title="Telegram">
+    <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/8/83/Telegram_2019_Logo.svg" alt="Telegram" />
+  </a>
+  <a href="#" id="laserIcon" title="Tinker Laser">
+    <img class="icon" src="https://www.dotafire.com/images/skill/tinker-laser.png" alt="Tinker Laser" />
+  </a>
+  <a href="https://steamcommunity.com/id/negrnegrnegrnegr123" target="_blank" title="Steam">
+    <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" alt="Steam" />
+  </a>
+</div>
+  <audio id="laserSound" src="https://static.wikia.nocookie.net/dota2_gamepedia/images/5/55/Vo_tinker_tink_ability_laser_03.mp3/revision/latest?cb=20201020224045"></audio>
 
   <script>
-    // Функция расчёта оставшегося времени с корректировкой дат
-    function getTimeRemaining(endTime) {
-      const now = new Date();
-      let years = endTime.getFullYear() - now.getFullYear();
-      let months = endTime.getMonth() - now.getMonth();
-      let days = endTime.getDate() - now.getDate();
-      let hours = endTime.getHours() - now.getHours();
-      let minutes = endTime.getMinutes() - now.getMinutes();
-      let seconds = endTime.getSeconds() - now.getSeconds();
+    const startTime = new Date("2025-04-08T06:00:00+03:00");
+    const endTime = new Date("2026-04-12T06:00:00+03:00");
 
-      if (seconds < 0) {
-        seconds += 60;
-        minutes--;
-      }
-      if (minutes < 0) {
-        minutes += 60;
-        hours--;
-      }
-      if (hours < 0) {
-        hours += 24;
-        days--;
-      }
-      if (days < 0) {
-        let previousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        days += previousMonth.getDate();
-        months--;
-      }
-      if (months < 0) {
-        months += 12;
-        years--;
-      }
-      
-      return {
-        total: endTime - now,
-        years,
-        months,
-        days,
-        hours,
-        minutes,
-        seconds
-      };
+    let currentMode = localStorage.getItem("mode") || "toEnd"; // toEnd | fromStart
+    let displayMode = localStorage.getItem("displayMode") || "full"; // full | daysOnly
+
+    function getTimeParts(from, to) {
+      let diff = to - from;
+      if (diff < 0) diff = 0;
+      const d = new Date(diff);
+      const years = d.getUTCFullYear() - 1970;
+      const months = d.getUTCMonth();
+      const days = d.getUTCDate() - 1;
+      const hours = d.getUTCHours();
+      const minutes = d.getUTCMinutes();
+      const seconds = d.getUTCSeconds();
+      return { years, months, days, hours, minutes, seconds };
+    }
+
+    function getDaysOnly(from, to) {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const diff = Math.max(0, Math.floor((to - from) / msPerDay));
+      return diff;
     }
 
     function updateTimer() {
-      const startTime = new Date("2025-04-08T06:00:00+03:00");
-      const endTime = new Date("2026-04-08T06:00:00+03:00");
-      
       const now = new Date();
-      if (now < startTime) {
-        document.getElementById("timer").innerHTML = "Таймер начнётся 8 апреля 2025 года в 06:00 по Москве";
-        return;
+      const timerEl = document.getElementById("timer");
+      const headerEl = document.getElementById("modeHeader");
+      const modeBtn = document.getElementById("modeToggle");
+      const displayBtn = document.getElementById("displayToggle");
+
+      if (currentMode === "fromStart") {
+        if (now < startTime) {
+          timerEl.innerHTML = "Кот ещё не ушёл!";
+          return;
+        }
+
+        if (displayMode === "daysOnly") {
+          const days = getDaysOnly(startTime, now);
+          headerEl.textContent = "С ухода Кота прошло:";
+          timerEl.innerHTML = `${days} дней`;
+        } else {
+          const t = getTimeParts(startTime, now);
+          headerEl.textContent = "Прошло с ухода Кота:";
+          timerEl.innerHTML =
+            t.years + " лет " +
+            t.months + " мес " +
+            t.days + " дн " +
+            ("0" + t.hours).slice(-2) + " ч " +
+            ("0" + t.minutes).slice(-2) + " мин " +
+            ("0" + t.seconds).slice(-2) + " сек";
+        }
+
+        modeBtn.textContent = "Время до дембеля";
+      } else {
+        if (now < startTime) {
+          timerEl.innerHTML = "Таймер начнётся 8 апреля 2025 года в 06:00";
+          return;
+        }
+
+        if (endTime - now <= 0) {
+          timerEl.innerHTML = "Кот вернулся! 🎉";
+          return;
+        }
+
+        if (displayMode === "daysOnly") {
+          const days = getDaysOnly(now, endTime);
+          headerEl.textContent = "До возвращения Кота осталось:";
+          timerEl.innerHTML = `${days} дней`;
+        } else {
+          const t = getTimeParts(now, endTime);
+          headerEl.textContent = "До возвращения Кота осталось:";
+          timerEl.innerHTML =
+            t.years + " лет " +
+            t.months + " мес " +
+            t.days + " дн " +
+            ("0" + t.hours).slice(-2) + " ч " +
+            ("0" + t.minutes).slice(-2) + " мин " +
+            ("0" + t.seconds).slice(-2) + " сек";
+        }
+
+        modeBtn.textContent = "Время с ухода";
       }
-      
-      const t = getTimeRemaining(endTime);
-      if (t.total <= 0) {
-        document.getElementById("timer").innerHTML = "Время вышло!";
-        clearInterval(timeInterval);
-        return;
-      }
-      
-      document.getElementById("timer").innerHTML =
-        t.years + " лет " +
-        t.months + " мес " +
-        t.days + " дн " +
-        ("0" + t.hours).slice(-2) + " ч " +
-        ("0" + t.minutes).slice(-2) + " мин " +
-        ("0" + t.seconds).slice(-2) + " сек";
+
+      displayBtn.textContent = displayMode === "full" ? "Точное время" : "Дни";
     }
 
-    updateTimer();
-    const timeInterval = setInterval(updateTimer, 1000);
-
-    // Устанавливаем тёмную тему по умолчанию
-    const themeToggle = document.getElementById('themeToggle');
-    const currentTheme = localStorage.getItem('theme') || 'dark';
-    document.body.classList.toggle('dark', currentTheme === 'dark');
-    themeToggle.textContent = currentTheme === 'dark' ? 'Светлая тема' : 'Темная тема';
-
-    themeToggle.addEventListener('click', function () {
-      document.body.classList.toggle('dark');
-      const newTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-      localStorage.setItem('theme', newTheme);
-      themeToggle.textContent = newTheme === 'dark' ? 'Светлая тема' : 'Темная тема';
+    document.getElementById("modeToggle").addEventListener("click", () => {
+      currentMode = currentMode === "toEnd" ? "fromStart" : "toEnd";
+      localStorage.setItem("mode", currentMode);
+      updateTimer();
     });
+
+    document.getElementById("displayToggle").addEventListener("click", () => {
+      displayMode = displayMode === "full" ? "daysOnly" : "full";
+      localStorage.setItem("displayMode", displayMode);
+      updateTimer();
+    });
+
+    // Tinker Laser Sound
+    document.getElementById("laserIcon").addEventListener("click", (e) => {
+      e.preventDefault();
+      const sound = document.getElementById("laserSound");
+      sound.currentTime = 0;
+      sound.play();
+    });
+
+    // Theme toggle
+    const currentTheme = localStorage.getItem("theme") || "dark";
+    const themeToggle = document.getElementById("themeToggle");
+    document.body.classList.toggle("dark", currentTheme === "dark");
+    themeToggle.textContent =
+      currentTheme === "dark" ? "Светлая тема" : "Темная тема";
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      const newTheme = document.body.classList.contains("dark")
+        ? "dark"
+        : "light";
+      localStorage.setItem("theme", newTheme);
+      themeToggle.textContent =
+        newTheme === "dark" ? "Светлая тема" : "Темная тема";
+    });
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
   </script>
 </body>
 </html>
