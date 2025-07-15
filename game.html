@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Игра с Котом — Максим</title>
+<style>
+  body, html {
+    margin:0; padding:0; height:100%; overflow: hidden;
+    background: #121212; 
+    color:#e0e0e0; 
+    font-family: Arial, sans-serif;
+    user-select: none;
+  }
+  #gameContainer {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: #121212;
+  }
+  #score {
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 1.8rem; font-weight: 600;
+    z-index: 20;
+    user-select: none;
+    color: #a0a0a0;
+    text-shadow: 0 0 4px rgba(0,0,0,0.7);
+  }
+  #message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(24,24,24,0.95);
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(0,128,0,0.4);
+    text-align: center;
+    z-index: 30;
+    display: none;
+    user-select: none;
+  }
+  #message .text {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #c0c0c0;
+  }
+  #message img {
+    width: 320px;
+    border-radius: 12px;
+  }
+  #message button {
+    margin-top: 15px;
+    padding: 10px 25px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    background: #4CAF50;
+    border: none;
+    border-radius: 8px;
+    color: #121212;
+    font-weight: 700;
+    transition: background 0.3s;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #message button:hover {
+    background: #45a045;
+  }
+
+  #skinSelect {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1e1e1e;
+    padding: 25px 30px;
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(76,175,80,0.25);
+    z-index: 25;
+    text-align: center;
+  }
+  #skinSelect h2 {
+    margin-bottom: 20px;
+    font-size: 2rem;
+    color: #4CAF50;
+  }
+  #skinOptions {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+  }
+  #skinOptions img {
+    width: 140px;
+    height: 140px;
+    cursor: pointer;
+    border-radius: 16px;
+    border: 3px solid transparent;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    object-fit: contain;
+  }
+  #skinOptions img.selected {
+    border-color: #4CAF50;
+    box-shadow: 0 0 15px rgba(76,175,80,0.6);
+  }
+  #startGameBtn {
+    margin-top: 25px;
+    padding: 12px 35px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    background: #4CAF50;
+    color: #121212;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    transition: background 0.3s;
+  }
+  #startGameBtn:disabled {
+    background: #555;
+    cursor: default;
+  }
+
+  canvas {
+    display: block;
+    background: #121212;
+  }
+
+  #abilities {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 25px;
+    z-index: 25;
+  }
+  .ability-btn {
+    width: 64px;
+    height: 64px;
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(76,175,80,0.3);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    transition: filter 0.3s;
+  }
+  .ability-btn img {
+    width: 44px;
+    height: 44px;
+  }
+  .ability-btn.disabled {
+    filter: grayscale(100%) opacity(0.5);
+    cursor: default;
+  }
+  .cooldown-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.65);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #8bc34a;
+    font-weight: 700;
+    font-size: 1rem;
+    user-select: none;
+  }
+
+  #keyBindSettings {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #1e1e1e;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(76,175,80,0.25);
+    color: #8bc34a;
+    font-size: 1rem;
+    user-select: none;
+    z-index: 30;
+    max-width: 220px;
+  }
+  #keyBindSettings h3 {
+    margin: 0 0 10px 0;
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  #keyBindSettings label {
+    display: block;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  #keyBindSettings label span {
+    margin-left: 5px;
+    color: #a5d6a7;
+  }
+  #keyBindSettings input {
+    width: 30px;
+    text-align: center;
+    background: #121212;
+    border: 1px solid #4CAF50;
+    color: #4CAF50;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  #keyBindSettings input:focus {
+    outline: none;
+    border-color: #a5d6a7;
+    box-shadow: 0 0 6px #a5d6a7;
+  }
+
+  #backToSiteBtn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: #4CAF50;
+    border: none;
+    color: #121212;
+    padding: 10px 20px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    z-index: 40;
+    transition: background 0.3s;
+  }
+  #backToSiteBtn:hover {
+    background: #45a045;
+  }
+
+@media (max-width: 768px) {
+  #abilities {
+    flex-direction: row;
+    bottom: 10px;
+    gap: 15px;
+  }
+  .ability-btn {
+    width: 56px;
+    height: 56px;
+  }
+  .ability-btn img {
+    width: 36px;
+    height: 36px;
+  }
+  #score {
+    font-size: 1.4rem;
+  }
+  #keyBindSettings {
+    display: none; /* скрыть бинды на мобилке */
+  }
+  #skinOptions {
+    flex-direction: column;
+    gap: 20px;
+  }
+  #skinOptions img {
+    width: 120px;
+    height: 120px;
+  }
+  #message img {
+    width: 260px;
+  }
+  #startGameBtn, #message button {
+    font-size: 1.1rem;
+    padding: 10px 20px;
+  }
+}
+
+</style>
+</head>
+<body>
+<div id="gameContainer"></div>
+
+<button id="backToSiteBtn">Вернуться на сайт</button>
+
+<div id="skinSelect">
+  <h2>Выбери своего Кота</h2>
+  <div id="skinOptions">
+    <img src="assets/waterkot.jpg" alt="Water Kot" data-skin="water" />
+    <img src="assets/gyrokot.png" alt="Gyro Kot" data-skin="gyro" />
+  </div>
+  <button id="startGameBtn" disabled>Нажмите, чтобы начать</button>
+</div>
+
+<div id="score">Очки: 0</div>
+
+<div id="message">
+  <div class="text">Кот попался!</div>
+  <img src="assets/gifkot.gif" alt="Кот попался" />
+  <button id="restartBtn">Начать заново</button>
+</div>
+
+<div id="abilities" style="display:none;">
+  <div class="ability-btn" id="daggerBtn" title="Даггер (Blink) (V)">
+    <img src="assets/dagger.png" alt="Даггер" />
+    <div class="cooldown-overlay" id="daggerCooldown" style="display:none;">15</div>
+  </div>
+  <div class="ability-btn" id="rocketBtn" title="Ракеты (W)">
+    <img src="assets/raketa.png" alt="Ракеты" />
+    <div class="cooldown-overlay" id="rocketCooldown" style="display:none;">25</div>
+  </div>
+  <div class="ability-btn" id="rearmBtn" title="Реарм (R)">
+    <img src="assets/Rearm.png" alt="Реарм" />
+    <div class="cooldown-overlay" id="rearmCooldown" style="display:none;">5</div>
+  </div>
+</div>
+
+<div id="keyBindSettings">
+  <h3>Настройка биндов</h3>
+  <label>Даггер (Blink): <input type="text" id="bindDagger" maxlength="1" /></label>
+  <label>Ракеты: <input type="text" id="bindRocket" maxlength="1" /></label>
+  <label>Реарм: <input type="text" id="bindRearm" maxlength="1" /></label>
+  <small>Нажмите на поле и выберите клавишу</small>
+</div>
+
+<audio id="rocketLaunchSound" src="assets/rocketlaunch.mpeg"></audio>
+<audio id="rocketHitSound" src="assets/rocketcatch.mpeg"></audio>
+<audio id="rearmSound" src="assets/Rearm3.mpeg"></audio>
+<audio id="teleportSound" src="assets/teleport.mpeg"></audio>
+
+<script>
+(() => {
+  const rusToEng = {
+  'й': 'q', 'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y', 'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p',
+  'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l',
+  'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'и': 'b', 'т': 'n', 'ь': 'm'
+};
+
+function normalizeKey(key) {
+  key = key.toLowerCase();
+  if (key.length !== 1) return key;
+  if (rusToEng[key]) return rusToEng[key];
+  return key;
+}
+
+  const container = document.getElementById('gameContainer');
+  const skinSelect = document.getElementById('skinSelect');
+  const skinOptions = skinSelect.querySelectorAll('#skinOptions img');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const scoreEl = document.getElementById('score');
+  const message = document.getElementById('message');
+  const restartBtn = document.getElementById('restartBtn');
+  const abilitiesDiv = document.getElementById('abilities');
+  const daggerBtn = document.getElementById('daggerBtn');
+  const rocketBtn = document.getElementById('rocketBtn');
+  const rearmBtn = document.getElementById('rearmBtn');
+  const daggerCooldownEl = document.getElementById('daggerCooldown');
+  const rocketCooldownEl = document.getElementById('rocketCooldown');
+  const rearmCooldownEl = document.getElementById('rearmCooldown');
+  const backToSiteBtn = document.getElementById('backToSiteBtn');
+
+  const bindDaggerInput = document.getElementById('bindDagger');
+  const bindRocketInput = document.getElementById('bindRocket');
+  const bindRearmInput = document.getElementById('bindRearm');
+
+  let keyBinds = {
+    dagger: localStorage.getItem('bindDagger') || 'v',
+    rocket: localStorage.getItem('bindRocket') || 'w',
+    rearm: localStorage.getItem('bindRearm') || 'r',
+  };
+  function matchesBind(bind, keyPressed) {
+    if (!bind) return false;
+    const rusEquivalent = engToRus[bind];
+    return keyPressed === bind || keyPressed === rusEquivalent;
+}
+
+
+  bindDaggerInput.value = keyBinds.dagger.toUpperCase();
+  bindRocketInput.value = keyBinds.rocket.toUpperCase();
+  bindRearmInput.value = keyBinds.rearm.toUpperCase();
+
+  function setupBindInput(input, keyName) {
+    input.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      let k = e.key.toLowerCase();
+      if(k.length === 1 && k.match(/[a-z0-9]/)) {
+        keyBinds[keyName] = k;
+        localStorage.setItem('bind' + keyName.charAt(0).toUpperCase() + keyName.slice(1), k);
+        input.value = k.toUpperCase();
+      }
+    });
+  }
+
+  setupBindInput(bindDaggerInput, 'dagger');
+  setupBindInput(bindRocketInput, 'rocket');
+  setupBindInput(bindRearmInput, 'rearm');
+
+  let selectedSkin = null;
+  let canvas, ctx;
+  let width, height;
+  let player = null;
+  let enemies = [];
+  let rockets = [];
+  let lastTime = 0;
+  let score = 0;
+  let gameRunning = false;
+
+  let rocketCooldown = 0;
+  let rearmCooldown = 0;
+  let daggerCooldown = 0;
+
+  let mousePos = {x: 0, y: 0};
+  let canMoveMouse = true;
+  let rearmActive = false;
+
+  const PLAYER_RADIUS = 40;
+  const ENEMY_RADIUS = 30;
+  const DAGGER_BASE_RADIUS = 40; 
+  const DAGGER_MAX_RADIUS = DAGGER_BASE_RADIUS * 8; // 8 радиусов, как просил
+  const ROCKET_SPEED = 500;
+  const ENEMY_SPEED = 130;
+  const PLAYER_WALK_SPEED = 131; // чуть медленнее врагов
+  const PLAYER_WALK_SPEED_NORMAL = 180;
+
+  const skinImgs = {};
+  let daggerImg = new Image();
+  daggerImg.src = 'assets/dagger.png';
+
+  let enemyImg = new Image();
+  enemyImg.src = 'assets/voy.png';
+
+  let rocketImg = new Image();
+  rocketImg.src = 'assets/raketa.png';
+
+  let rearmImg = new Image();
+  rearmImg.src = 'assets/Rearm.png';
+
+  const sounds = {
+    rocketLaunch: document.getElementById('rocketLaunchSound'),
+    rocketHit: document.getElementById('rocketHitSound'),
+    rearm: document.getElementById('rearmSound'),
+    teleport: document.getElementById('teleportSound'),
+  };
+
+  class Player {
+    constructor(x, y, img) {
+      this.x = x;
+      this.y = y;
+      this.img = img;
+      this.radius = PLAYER_RADIUS;
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius*2, this.radius*2);
+      ctx.restore();
+    }
+  }
+
+  class Enemy {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.radius = ENEMY_RADIUS;
+      this.alive = true;
+      this.speed = ENEMY_SPEED;
+    }
+    update(dt) {
+      if(!this.alive) return;
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const distToPlayer = Math.hypot(dx, dy);
+      if(distToPlayer > 0) {
+        this.x += (dx / distToPlayer) * this.speed * dt;
+        this.y += (dy / distToPlayer) * this.speed * dt;
+      }
+    }
+    draw(ctx) {
+      if(!this.alive) return;
+      const size = this.radius * 2;
+      ctx.drawImage(enemyImg, this.x - this.radius, this.y - this.radius, size, size);
+    }
+  }
+
+  class Rocket {
+    constructor(x, y, target) {
+      this.x = x;
+      this.y = y;
+      this.target = target;
+      this.speed = ROCKET_SPEED;
+      this.radius = 12;
+      this.alive = true;
+    }
+    update(dt) {
+      if(!this.alive || !this.target.alive) {
+        this.alive = false;
+        return;
+      }
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      if(dist < this.radius + this.target.radius) {
+        this.alive = false;
+        this.target.alive = false;
+        score++;
+        sounds.rocketHit.play();
+        updateScore();
+        return;
+      }
+      const vx = (dx / dist) * this.speed;
+      const vy = (dy / dist) * this.speed;
+      this.x += vx * dt;
+      this.y += vy * dt;
+    }
+    draw(ctx) {
+      if(!this.alive) return;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+      ctx.rotate(angle);
+      ctx.fillStyle = '#e53935';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-this.radius * 1.5, this.radius);
+      ctx.lineTo(this.radius * 2, 0);
+      ctx.lineTo(-this.radius * 1.5, -this.radius);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function dist(a,b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function updateScore() {
+    scoreEl.textContent = `Очки: ${score}`;
+  }
+
+  function loadSkins() {
+    const waterImg = new Image();
+    waterImg.src = 'assets/waterkot.jpg';
+    skinImgs['water'] = waterImg;
+    const gyroImg = new Image();
+    gyroImg.src = 'assets/gyrokot.png';
+    skinImgs['gyro'] = gyroImg;
+  }
+
+  function startGame() {
+    skinSelect.style.display = 'none';
+    abilitiesDiv.style.display = 'flex';
+    backToSiteBtn.style.display = 'block';
+    score = 0;
+    updateScore();
+    gameRunning = true;
+    player = new Player(width/2, height/2, skinImgs[selectedSkin]);
+
+    enemies = [];
+    rockets = [];
+
+    rocketCooldown = 0;
+    rearmCooldown = 0;
+    daggerCooldown = 0;
+
+    rearmActive = false;
+
+    canMoveMouse = true;
+    lastTime = performance.now();
+    waveTimer = 0;
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function gameOver() {
+    gameRunning = false;
+    abilitiesDiv.style.display = 'none';
+    message.style.display = 'block';
+  }
+
+  restartBtn.onclick = () => {
+    message.style.display = 'none';
+    startGame();
+  };
+
+  backToSiteBtn.onclick = () => {
+    if (gameRunning) {
+      if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
+        location.href = '/'; // меняй на свой URL сайта
+      }
+    } else {
+      location.href = '/'; // меняй на свой URL сайта
+    }
+  };
+
+  skinOptions.forEach(img => {
+    img.addEventListener('click', () => {
+      skinOptions.forEach(i => i.classList.remove('selected'));
+      img.classList.add('selected');
+      selectedSkin = img.dataset.skin;
+      startGameBtn.disabled = false;
+    });
+  });
+
+  startGameBtn.onclick = () => {
+    if(selectedSkin) startGame();
+  };
+
+  let waveTimer = 0;
+  const waveInterval = 6000; // 6 секунд
+
+  function spawnWave() {
+    if(!gameRunning) return;
+    for(let i=0; i<3; i++) {
+      const side = Math.floor(Math.random()*4);
+      let x, y;
+      switch(side) {
+        case 0: x = -ENEMY_RADIUS; y = Math.random()*height; break;
+        case 1: x = Math.random()*width; y = -ENEMY_RADIUS; break;
+        case 2: x = width + ENEMY_RADIUS; y = Math.random()*height; break;
+        case 3: x = Math.random()*width; y = height + ENEMY_RADIUS; break;
+      }
+      enemies.push(new Enemy(x,y));
+    }
+  }
+
+  function tryLaunchRockets() {
+    if (rocketCooldown > 0 || rearmActive || !gameRunning) return;
+    const aliveEnemies = enemies.filter(e => e.alive);
+    if (aliveEnemies.length === 0) return;
+
+    aliveEnemies.sort((a,b) => dist(a, player) - dist(b, player));
+
+    const rocketsCanLaunch = 2 - rockets.length;
+    if (rocketsCanLaunch <= 0) return;
+
+    for(let i=0; i<rocketsCanLaunch && i < aliveEnemies.length; i++) {
+      rockets.push(new Rocket(player.x, player.y, aliveEnemies[i]));
+    }
+    if (rocketsCanLaunch > 0) {
+      sounds.rocketLaunch.play();
+      rocketCooldown = 25;
+      updateCooldownUI();
+    }
+  }
+
+  function tryRearm() {
+   if (rearmCooldown > 0 || rearmActive || !gameRunning) return;
+
+   rearmActive = true;
+   canMoveMouse = false;
+
+   rocketCooldown = 0;
+   rearmCooldown = 5;
+   daggerCooldown = 0;
+   sounds.rearm.play();
+   updateCooldownUI();
+
+   sounds.rearm.play();
+   updateCooldownUI();
+
+   setTimeout(() => {
+     rearmActive = false;
+     canMoveMouse = true;
+   }, 1250); // блокировка — 1.25 секунды (1250 мс)
+ }
+
+
+  function useDagger() {
+    if(daggerCooldown > 0 || rearmActive || !gameRunning) return;
+
+    const dx = mousePos.x - player.x;
+    const dy = mousePos.y - player.y;
+    const distance = Math.hypot(dx, dy);
+    if(distance === 0) return;
+
+    const tpDist = Math.min(distance, DAGGER_MAX_RADIUS);
+    const dirX = dx / distance;
+    const dirY = dy / distance;
+
+    player.x += dirX * tpDist;
+    player.y += dirY * tpDist;
+
+    sounds.teleport.play();
+
+    daggerCooldown = 15;
+    updateCooldownUI();
+  }
+
+  function updateCooldownUI() {
+    // Ракеты
+    if(rocketCooldown > 0) {
+      rocketBtn.classList.add('disabled');
+      rocketCooldownEl.style.display = 'flex';
+      rocketCooldownEl.textContent = Math.ceil(rocketCooldown);
+    } else {
+      rocketBtn.classList.remove('disabled');
+      rocketCooldownEl.style.display = 'none';
+    }
+    // Реарм
+    if(rearmCooldown > 0) {
+      rearmBtn.classList.add('disabled');
+      rearmCooldownEl.style.display = 'flex';
+      rearmCooldownEl.textContent = Math.ceil(rearmCooldown);
+    } else {
+      rearmBtn.classList.remove('disabled');
+      rearmCooldownEl.style.display = 'none';
+    }
+    // Даггер (блинк)
+    if(daggerCooldown > 0) {
+      daggerBtn.classList.add('disabled');
+      daggerCooldownEl.style.display = 'flex';
+      daggerCooldownEl.textContent = Math.ceil(daggerCooldown);
+      daggerBtn.title = `Даггер (Blink) (Cooldown ${Math.ceil(daggerCooldown)}s) (${keyBinds.dagger.toUpperCase()})`;
+    } else {
+      daggerBtn.classList.remove('disabled');
+      daggerCooldownEl.style.display = 'none';
+      daggerBtn.title = `Даггер (Blink) (${keyBinds.dagger.toUpperCase()})`;
+    }
+  }
+
+  daggerBtn.onclick = () => { if(gameRunning) useDagger(); };
+  rocketBtn.onclick = () => { if(gameRunning) tryLaunchRockets(); };
+  rearmBtn.onclick = () => { if(gameRunning) tryRearm(); };
+
+  window.addEventListener('keydown', e => {
+    if(!gameRunning) return;
+    if(e.repeat) return;
+    const key = normalizeKey(e.key);
+    if(key === keyBinds.dagger) useDagger();
+    else if(key === keyBinds.rocket) tryLaunchRockets();
+    else if(key === keyBinds.rearm) tryRearm();
+  });
+
+  window.addEventListener('mousemove', e => {
+  // Сенсорное управление на телефонах
+  window.addEventListener('touchmove', e => {
+    if (!canMoveMouse || !gameRunning) return;
+    if (e.touches.length > 0) {
+      const touch = e.touches[0];
+      mousePos.x = touch.clientX;
+      mousePos.y = touch.clientY;
+    }
+  });
+
+    if(!canMoveMouse) return;
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+  });
+
+  function gameLoop(ts) {
+    if (!gameRunning) return;
+    const dt = (ts - lastTime) / 1000;
+    lastTime = ts;
+
+    if(rocketCooldown > 0) rocketCooldown = Math.max(0, rocketCooldown - dt);
+    if(rearmCooldown > 0) rearmCooldown = Math.max(0, rearmCooldown - dt);
+    if(daggerCooldown > 0) daggerCooldown = Math.max(0, daggerCooldown - dt);
+    updateCooldownUI();
+
+    enemies.forEach(enemy => enemy.update(dt));
+    rockets.forEach(r => r.update(dt));
+
+    rockets = rockets.filter(r => r.alive);
+    enemies = enemies.filter(e => e.alive);
+
+    waveTimer += dt * 1000;
+    if(waveTimer > waveInterval) {
+      spawnWave();
+      waveTimer = 0;
+    }
+
+    for(let enemy of enemies) {
+      if(dist(enemy, player) < enemy.radius + player.radius) {
+        gameOver();
+        return;
+      }
+    }
+
+    // При кулдауне блинка кот идёт медленнее за курсором
+    if(daggerCooldown > 0 && canMoveMouse && !rearmActive) {
+      const dx = mousePos.x - player.x;
+      const dy = mousePos.y - player.y;
+      const distToMouse = Math.hypot(dx, dy);
+      if(distToMouse > 1) {
+        const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
+        player.x += (dx / distToMouse) * moveDist;
+        player.y += (dy / distToMouse) * moveDist;
+      }
+    } else if(canMoveMouse && !rearmActive) {
+      // Если нет кулдауна — кот не двигается по мыши, остаётся на месте
+      // (можно убрать или реализовать движение)
+    }
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Рисуем игрока
+    player.draw(ctx);
+
+    // Рисуем цель блинка — без обводки, только мягкий полупрозрачный круг и иконка
+    ctx.save();
+    let dx = mousePos.x - player.x;
+    let dy = mousePos.y - player.y;
+    let distToMouse = Math.hypot(dx, dy);
+    if(distToMouse > DAGGER_MAX_RADIUS) {
+      dx = (dx / distToMouse) * DAGGER_MAX_RADIUS;
+      dy = (dy / distToMouse) * DAGGER_MAX_RADIUS;
+      distToMouse = DAGGER_MAX_RADIUS;
+    }
+    const tpX = player.x + dx;
+    const tpY = player.y + dy;
+
+    // Иконка даггера в центре
+    ctx.drawImage(daggerImg, tpX - DAGGER_BASE_RADIUS * 0.75, tpY - DAGGER_BASE_RADIUS * 0.75, DAGGER_BASE_RADIUS * 1.5, DAGGER_BASE_RADIUS * 1.5);
+
+    ctx.restore();
+
+    enemies.forEach(enemy => enemy.draw(ctx));
+    rockets.forEach(r => r.draw(ctx));
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function initCanvas() {
+    canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+  }
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  loadSkins();
+  initCanvas();
+
+})();
+</script>
+</body>
+</html>
