@@ -507,21 +507,16 @@ function normalizeKey(key) {
       this.y += vy * dt;
     }
     draw(ctx) {
-      if(!this.alive) return;
+      if (!this.alive) return;
       ctx.save();
       ctx.translate(this.x, this.y);
       const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
       ctx.rotate(angle);
       ctx.fillStyle = '#e53935';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-this.radius * 1.5, this.radius);
-      ctx.lineTo(this.radius * 2, 0);
-      ctx.lineTo(-this.radius * 1.5, -this.radius);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillRect(-10, -5, 20, 10); // прямоугольник 20x10
       ctx.restore();
-    }
+}
+
   }
 
   function dist(a,b) {
@@ -578,14 +573,16 @@ function normalizeKey(key) {
   };
 
   backToSiteBtn.onclick = () => {
-    if (gameRunning) {
-      if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
-        location.href = '/'; // меняй на свой URL сайта
-      }
-    } else {
-      location.href = '/'; // меняй на свой URL сайта
+   const targetURL = 'https://mmvlu.github.io/sapogonline/';
+   if (gameRunning) {
+     if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
+       location.href = targetURL;
     }
-  };
+  } else {
+    location.href = targetURL;
+  }
+};
+
 
   skinOptions.forEach(img => {
     img.addEventListener('click', () => {
