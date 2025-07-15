@@ -94,11 +94,26 @@
     .icon:hover {
       transform: scale(1.2);
     }
+    #gameButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      padding: 12px 18px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
   <button class="theme-toggle" id="themeToggle">Светлая тема</button>
   <button class="display-toggle" id="displayToggle">Точное время</button>
+  <button id="gameButton" onclick="location.href='game.html'">Игра</button>
 
   <div class="container">
     <div class="header" id="modeHeader">До возвращения Кота осталось:</div>
@@ -118,14 +133,14 @@
     </a>
   </div>
 
-  <audio id="laserSound" src="laser.mp3"></audio>
+  <audio id="laserSound" src="https://static.wikia.nocookie.net/dota2_gamepedia/images/5/55/Vo_tinker_tink_ability_laser_03.mp3/revision/latest?cb=20201020224045"></audio>
 
   <script>
     const startTime = new Date("2025-04-08T06:00:00+03:00");
     const endTime = new Date("2026-04-12T06:00:00+03:00");
 
-    let currentMode = localStorage.getItem("mode") || "toEnd"; // toEnd | fromStart
-    let displayMode = localStorage.getItem("displayMode") || "full"; // full | daysOnly
+    let currentMode = localStorage.getItem("mode") || "toEnd";
+    let displayMode = localStorage.getItem("displayMode") || "full";
 
     function getTimeParts(from, to) {
       let diff = to - from;
@@ -221,7 +236,6 @@
       updateTimer();
     });
 
-    // Tinker Laser Sound
     document.getElementById("laserIcon").addEventListener("click", (e) => {
       e.preventDefault();
       const sound = document.getElementById("laserSound");
@@ -229,7 +243,6 @@
       sound.play();
     });
 
-    // Theme toggle
     const currentTheme = localStorage.getItem("theme") || "dark";
     const themeToggle = document.getElementById("themeToggle");
     document.body.classList.toggle("dark", currentTheme === "dark");
