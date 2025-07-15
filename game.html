@@ -12,6 +12,13 @@
     font-family: Arial, sans-serif;
     user-select: none;
   }
+#volumeControl label {
+  color: #a5d6a7;
+  font-weight: 600;
+}
+#volumeSlider {
+  width: 100%;
+}
   #gameContainer {
     position: relative;
     width: 100vw; height: 100vh;
@@ -180,7 +187,7 @@
     font-size: 1rem;
     user-select: none;
     z-index: 30;
-    max-width: 220px;
+    max-width: 260px;
   }
   #keyBindSettings h3 {
     margin: 0 0 10px 0;
@@ -267,6 +274,12 @@
     padding: 10px 20px;
   }
 }
+#keyBindSettings.hidden {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
 
 </style>
 </head>
@@ -297,6 +310,10 @@
     <img src="assets/dagger.png" alt="Даггер" />
     <div class="cooldown-overlay" id="daggerCooldown" style="display:none;">15</div>
   </div>
+  <div class="ability-btn" id="laserBtn" title="Лазер (Q)">
+    <img src="assets/laser.png" alt="Лазер" />
+    <div class="cooldown-overlay" id="laserCooldown" style="display:none;">16</div>
+  </div>
   <div class="ability-btn" id="rocketBtn" title="Ракеты (W)">
     <img src="assets/raketa.png" alt="Ракеты" />
     <div class="cooldown-overlay" id="rocketCooldown" style="display:none;">25</div>
@@ -310,15 +327,24 @@
 <div id="keyBindSettings">
   <h3>Настройка биндов</h3>
   <label>Даггер (Blink): <input type="text" id="bindDagger" maxlength="1" /></label>
+  <label>Лазер: <input type="text" id="bindLaser" maxlength="1" /></label>
   <label>Ракеты: <input type="text" id="bindRocket" maxlength="1" /></label>
   <label>Реарм: <input type="text" id="bindRearm" maxlength="1" /></label>
   <small>Нажмите на поле и выберите клавишу</small>
+
+  <div id="volumeControl" style="margin-top:15px;">
+    <label for="volumeSlider">Громкость:</label><br>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" style="width: 100%;" />
+  </div>
 </div>
+
+
 
 <audio id="rocketLaunchSound" src="assets/rocketlaunch.mpeg"></audio>
 <audio id="rocketHitSound" src="assets/rocketcatch.mpeg"></audio>
 <audio id="rearmSound" src="assets/Rearm3.mpeg"></audio>
 <audio id="teleportSound" src="assets/teleport.mpeg"></audio>
+<audio id="laserSound" src="assets/Laseruse.mp3"></audio>
 
 <script>
 (() => {
@@ -335,6 +361,8 @@ function normalizeKey(key) {
   return key;
 }
 
+const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k]));
+
   const container = document.getElementById('gameContainer');
   const skinSelect = document.getElementById('skinSelect');
   const skinOptions = skinSelect.querySelectorAll('#skinOptions img');
@@ -346,30 +374,35 @@ function normalizeKey(key) {
   const daggerBtn = document.getElementById('daggerBtn');
   const rocketBtn = document.getElementById('rocketBtn');
   const rearmBtn = document.getElementById('rearmBtn');
+  const laserBtn = document.getElementById('laserBtn');
   const daggerCooldownEl = document.getElementById('daggerCooldown');
   const rocketCooldownEl = document.getElementById('rocketCooldown');
   const rearmCooldownEl = document.getElementById('rearmCooldown');
+  const laserCooldownEl = document.getElementById('laserCooldown');
   const backToSiteBtn = document.getElementById('backToSiteBtn');
 
   const bindDaggerInput = document.getElementById('bindDagger');
   const bindRocketInput = document.getElementById('bindRocket');
   const bindRearmInput = document.getElementById('bindRearm');
+  const bindLaserInput = document.getElementById('bindLaser');
 
   let keyBinds = {
     dagger: localStorage.getItem('bindDagger') || 'v',
     rocket: localStorage.getItem('bindRocket') || 'w',
     rearm: localStorage.getItem('bindRearm') || 'r',
+    laser: localStorage.getItem('bindLaser') || 'q',
   };
+
   function matchesBind(bind, keyPressed) {
     if (!bind) return false;
     const rusEquivalent = engToRus[bind];
     return keyPressed === bind || keyPressed === rusEquivalent;
-}
-
+  }
 
   bindDaggerInput.value = keyBinds.dagger.toUpperCase();
   bindRocketInput.value = keyBinds.rocket.toUpperCase();
   bindRearmInput.value = keyBinds.rearm.toUpperCase();
+  bindLaserInput.value = keyBinds.laser.toUpperCase();
 
   function setupBindInput(input, keyName) {
     input.addEventListener('keydown', (e) => {
@@ -379,6 +412,7 @@ function normalizeKey(key) {
         keyBinds[keyName] = k;
         localStorage.setItem('bind' + keyName.charAt(0).toUpperCase() + keyName.slice(1), k);
         input.value = k.toUpperCase();
+        updateCooldownUI(); // обновить тултипы с биндами
       }
     });
   }
@@ -386,6 +420,7 @@ function normalizeKey(key) {
   setupBindInput(bindDaggerInput, 'dagger');
   setupBindInput(bindRocketInput, 'rocket');
   setupBindInput(bindRearmInput, 'rearm');
+  setupBindInput(bindLaserInput, 'laser');
 
   let selectedSkin = null;
   let canvas, ctx;
@@ -400,19 +435,32 @@ function normalizeKey(key) {
   let rocketCooldown = 0;
   let rearmCooldown = 0;
   let daggerCooldown = 0;
+  let laserCooldown = 0;
 
   let mousePos = {x: 0, y: 0};
   let canMoveMouse = true;
   let rearmActive = false;
 
+  // Для анимации лазера
+  let laserActive = false;
+  let laserActiveTime = 0;
+  const LASER_ACTIVE_DURATION = 0.15; // секунды
+  let laserTarget = null;
+
+  // Для анимации поворота игрока при реарме
+  let playerRotation = 0;
+  let playerRotating = false;
+  let playerRotationStart = 0;
+  const PLAYER_ROTATION_DURATION = 1000; // мс
+
   const PLAYER_RADIUS = 40;
   const ENEMY_RADIUS = 30;
   const DAGGER_BASE_RADIUS = 40; 
-  const DAGGER_MAX_RADIUS = DAGGER_BASE_RADIUS * 8; // 8 радиусов, как просил
+  const DAGGER_MAX_RADIUS = DAGGER_BASE_RADIUS * 8; // 8 радиусов
   const ROCKET_SPEED = 500;
-  const ENEMY_SPEED = 130;
-  const PLAYER_WALK_SPEED = 131; // чуть медленнее врагов
-  const PLAYER_WALK_SPEED_NORMAL = 180;
+  let ENEMY_SPEED = 130;
+  let PLAYER_BASE_SPEED = 135;
+  let PLAYER_WALK_SPEED = PLAYER_BASE_SPEED;
 
   const skinImgs = {};
   let daggerImg = new Image();
@@ -427,97 +475,34 @@ function normalizeKey(key) {
   let rearmImg = new Image();
   rearmImg.src = 'assets/Rearm.png';
 
+  let laserImg = new Image();
+  laserImg.src = 'assets/laser.png';
+
   const sounds = {
     rocketLaunch: document.getElementById('rocketLaunchSound'),
     rocketHit: document.getElementById('rocketHitSound'),
     rearm: document.getElementById('rearmSound'),
     teleport: document.getElementById('teleportSound'),
+    laser: document.getElementById('laserSound')
   };
 
-  class Player {
-    constructor(x, y, img) {
-      this.x = x;
-      this.y = y;
-      this.img = img;
-      this.radius = PLAYER_RADIUS;
-    }
-    draw(ctx) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
-      ctx.clip();
-      ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius*2, this.radius*2);
-      ctx.restore();
-    }
-  }
+  const volumeSlider = document.getElementById('volumeSlider');
 
-  class Enemy {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.radius = ENEMY_RADIUS;
-      this.alive = true;
-      this.speed = ENEMY_SPEED;
-    }
-    update(dt) {
-      if(!this.alive) return;
-      const dx = player.x - this.x;
-      const dy = player.y - this.y;
-      const distToPlayer = Math.hypot(dx, dy);
-      if(distToPlayer > 0) {
-        this.x += (dx / distToPlayer) * this.speed * dt;
-        this.y += (dy / distToPlayer) * this.speed * dt;
-      }
-    }
-    draw(ctx) {
-      if(!this.alive) return;
-      const size = this.radius * 2;
-      ctx.drawImage(enemyImg, this.x - this.radius, this.y - this.radius, size, size);
-    }
-  }
-
-  class Rocket {
-    constructor(x, y, target) {
-      this.x = x;
-      this.y = y;
-      this.target = target;
-      this.speed = ROCKET_SPEED;
-      this.radius = 12;
-      this.alive = true;
-    }
-    update(dt) {
-      if(!this.alive || !this.target.alive) {
-        this.alive = false;
-        return;
-      }
-      const dx = this.target.x - this.x;
-      const dy = this.target.y - this.y;
-      const dist = Math.hypot(dx, dy);
-      if(dist < this.radius + this.target.radius) {
-        this.alive = false;
-        this.target.alive = false;
-        score++;
-        sounds.rocketHit.play();
-        updateScore();
-        return;
-      }
-      const vx = (dx / dist) * this.speed;
-      const vy = (dy / dist) * this.speed;
-      this.x += vx * dt;
-      this.y += vy * dt;
-    }
-    draw(ctx) {
-      if (!this.alive) return;
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-      ctx.rotate(angle);
-      ctx.fillStyle = '#e53935';
-      ctx.fillRect(-10, -5, 20, 10); // прямоугольник 20x10
-      ctx.restore();
+// Функция установки громкости на все звуки
+function setVolume(value) {
+  Object.values(sounds).forEach(sound => {
+    sound.volume = value;
+  });
 }
 
-  }
+// Изначально установим громкость из ползунка
+setVolume(volumeSlider.value);
+
+// Обработчик изменения ползунка
+volumeSlider.addEventListener('input', (e) => {
+  setVolume(e.target.value);
+});
+
 
   function dist(a,b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
@@ -536,7 +521,97 @@ function normalizeKey(key) {
     skinImgs['gyro'] = gyroImg;
   }
 
+  class Player {
+    constructor(x, y, skin) {
+      this.x = x;
+      this.y = y;
+      this.radius = PLAYER_RADIUS;
+      this.skin = skin;
+      this.rotation = 0; // угол поворота в радианах для анимации реарма
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.clip();
+
+      ctx.drawImage(this.skin, -this.radius, -this.radius, this.radius*2, this.radius*2);
+      ctx.restore();
+    }
+  }
+
+  class Enemy {
+    constructor(x,y) {
+      this.x = x;
+      this.y = y;
+      this.radius = ENEMY_RADIUS;
+      this.speed = ENEMY_SPEED;
+      this.alive = true;
+    }
+    update(dt, speedOverride = null) {
+  if(!this.alive) return;
+  const dx = player.x - this.x;
+  const dy = player.y - this.y;
+  const distToPlayer = Math.hypot(dx, dy);
+  const speed = speedOverride ?? this.speed;
+  if(distToPlayer > 0) {
+    this.x += (dx / distToPlayer) * speed * dt;
+    this.y += (dy / distToPlayer) * speed * dt;
+  }
+}
+    draw(ctx) {
+      if(!this.alive) return;
+      ctx.drawImage(enemyImg, this.x - this.radius, this.y - this.radius, this.radius*2, this.radius*2);
+    }
+  }
+
+class Rocket {
+  constructor(x,y,target) {
+    this.x = x;
+    this.y = y;
+    this.radius = 14;
+    this.speed = ROCKET_SPEED;
+    this.target = target;
+    this.alive = true;
+  }
+  update(dt) {
+    if(!this.alive) return;
+    if(!this.target || !this.target.alive) {
+      this.alive = false;
+      return;
+    }
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const distToTarget = Math.hypot(dx, dy);
+    if(distToTarget < this.radius + this.target.radius) {
+      // Попадание
+      this.target.alive = false;
+      this.alive = false;
+      score++;
+      updateScore();
+      sounds.rocketHit.play();
+    } else {
+      this.x += (dx / distToTarget) * this.speed * dt;
+      this.y += (dy / distToTarget) * this.speed * dt;
+    }
+  }
+  draw(ctx) {
+    if(!this.alive) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#e53935';
+    ctx.fillRect(-10, -2, 20, 4); // Прямоугольная ракета
+    ctx.restore();
+  }
+}
+
   function startGame() {
+    startTime = performance.now();
     skinSelect.style.display = 'none';
     abilitiesDiv.style.display = 'flex';
     backToSiteBtn.style.display = 'block';
@@ -544,6 +619,7 @@ function normalizeKey(key) {
     updateScore();
     gameRunning = true;
     player = new Player(width/2, height/2, skinImgs[selectedSkin]);
+    document.getElementById('keyBindSettings').classList.add('hidden');
 
     enemies = [];
     rockets = [];
@@ -551,12 +627,17 @@ function normalizeKey(key) {
     rocketCooldown = 0;
     rearmCooldown = 0;
     daggerCooldown = 0;
+    laserCooldown = 0;
 
     rearmActive = false;
 
     canMoveMouse = true;
     lastTime = performance.now();
     waveTimer = 0;
+
+    playerRotation = 0;
+    playerRotating = false;
+    player.rotation = 0;
 
     requestAnimationFrame(gameLoop);
   }
@@ -565,24 +646,25 @@ function normalizeKey(key) {
     gameRunning = false;
     abilitiesDiv.style.display = 'none';
     message.style.display = 'block';
+    document.getElementById('keyBindSettings').classList.remove('hidden');
   }
 
   restartBtn.onclick = () => {
+    document.getElementById('keyBindSettings').classList.remove('hidden');
     message.style.display = 'none';
     startGame();
   };
 
   backToSiteBtn.onclick = () => {
-   const targetURL = 'https://mmvlu.github.io/sapogonline/';
-   if (gameRunning) {
-     if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
-       location.href = targetURL;
+    const targetURL = 'https://mmvlu.github.io/sapogonline/';
+    if (gameRunning) {
+      if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
+        location.href = targetURL;
+      }
+    } else {
+      location.href = targetURL;
     }
-  } else {
-    location.href = targetURL;
-  }
-};
-
+  };
 
   skinOptions.forEach(img => {
     img.addEventListener('click', () => {
@@ -598,22 +680,27 @@ function normalizeKey(key) {
   };
 
   let waveTimer = 0;
-  const waveInterval = 6000; // 6 секунд
+  let difficultyTimer = 0;
+  let difficultyLevel = 0;
+  let currentWaveInterval = 6000; // миллисекунд
 
-  function spawnWave() {
-    if(!gameRunning) return;
-    for(let i=0; i<3; i++) {
-      const side = Math.floor(Math.random()*4);
-      let x, y;
-      switch(side) {
-        case 0: x = -ENEMY_RADIUS; y = Math.random()*height; break;
-        case 1: x = Math.random()*width; y = -ENEMY_RADIUS; break;
-        case 2: x = width + ENEMY_RADIUS; y = Math.random()*height; break;
-        case 3: x = Math.random()*width; y = height + ENEMY_RADIUS; break;
-      }
-      enemies.push(new Enemy(x,y));
+function spawnWave() {
+  if (!gameRunning) return;
+
+  const elapsedSeconds = (performance.now() - startTime) / 1000;
+  const waveSize = 3 + Math.floor(elapsedSeconds / 15); // увеличиваем количество врагов
+  for(let i = 0; i < waveSize; i++) {
+    const side = Math.floor(Math.random()*4);
+    let x, y;
+    switch(side) {
+      case 0: x = -ENEMY_RADIUS; y = Math.random()*height; break;
+      case 1: x = Math.random()*width; y = -ENEMY_RADIUS; break;
+      case 2: x = width + ENEMY_RADIUS; y = Math.random()*height; break;
+      case 3: x = Math.random()*width; y = height + ENEMY_RADIUS; break;
     }
+    enemies.push(new Enemy(x,y));
   }
+}
 
   function tryLaunchRockets() {
     if (rocketCooldown > 0 || rearmActive || !gameRunning) return;
@@ -636,26 +723,30 @@ function normalizeKey(key) {
   }
 
   function tryRearm() {
-   if (rearmCooldown > 0 || rearmActive || !gameRunning) return;
+    if (rearmCooldown > 0 || rearmActive || !gameRunning) return;
 
-   rearmActive = true;
-   canMoveMouse = false;
+    rearmActive = true;
+    canMoveMouse = false;
 
-   rocketCooldown = 0;
-   rearmCooldown = 5;
-   daggerCooldown = 0;
-   sounds.rearm.play();
-   updateCooldownUI();
+    rocketCooldown = 0;
+    rearmCooldown = 0;
+    daggerCooldown = 0;
+    laserCooldown = 0; // Сбрасываем кулдаун лазера при реарме
 
-   sounds.rearm.play();
-   updateCooldownUI();
+    sounds.rearm.play();
+    updateCooldownUI();
 
-   setTimeout(() => {
-     rearmActive = false;
-     canMoveMouse = true;
-   }, 1250); // блокировка — 1.25 секунды (1250 мс)
- }
+    // Запускаем анимацию вращения игрока 360°
+    playerRotating = true;
+    playerRotationStart = performance.now();
 
+    setTimeout(() => {
+      rearmActive = false;
+      canMoveMouse = true;
+      playerRotating = false;
+      player.rotation = 0;
+    }, 1250); // блокировка — 1.25 секунды (1250 мс)
+  }
 
   function useDagger() {
     if(daggerCooldown > 0 || rearmActive || !gameRunning) return;
@@ -678,26 +769,59 @@ function normalizeKey(key) {
     updateCooldownUI();
   }
 
+  function useLaser() {
+    if(laserCooldown > 0 || rearmActive || !gameRunning) return;
+
+    // Найдём врага под мышью
+    laserTarget = null;
+    for(let enemy of enemies) {
+      if(enemy.alive && dist(enemy, mousePos) < enemy.radius) {
+        laserTarget = enemy;
+        break;
+      }
+    }
+
+    if(!laserTarget) return; // нет цели
+
+    // Убить цель
+    laserTarget.alive = false;
+    score++;
+    updateScore();
+
+    // Запускаем звук и анимацию
+    sounds.laser.currentTime = 0;
+    sounds.laser.play();
+    laserActive = true;
+    laserActiveTime = 0;
+
+    laserCooldown = 16;
+    updateCooldownUI();
+  }
+
   function updateCooldownUI() {
     // Ракеты
     if(rocketCooldown > 0) {
       rocketBtn.classList.add('disabled');
       rocketCooldownEl.style.display = 'flex';
       rocketCooldownEl.textContent = Math.ceil(rocketCooldown);
+      rocketBtn.title = `Ракеты (Cooldown ${Math.ceil(rocketCooldown)}s) (${keyBinds.rocket.toUpperCase()})`;
     } else {
       rocketBtn.classList.remove('disabled');
       rocketCooldownEl.style.display = 'none';
+      rocketBtn.title = `Ракеты (${keyBinds.rocket.toUpperCase()})`;
     }
     // Реарм
     if(rearmCooldown > 0) {
       rearmBtn.classList.add('disabled');
       rearmCooldownEl.style.display = 'flex';
       rearmCooldownEl.textContent = Math.ceil(rearmCooldown);
+      rearmBtn.title = `Реарм (Cooldown ${Math.ceil(rearmCooldown)}s) (${keyBinds.rearm.toUpperCase()})`;
     } else {
       rearmBtn.classList.remove('disabled');
       rearmCooldownEl.style.display = 'none';
+      rearmBtn.title = `Реарм (${keyBinds.rearm.toUpperCase()})`;
     }
-    // Даггер (блинк)
+    // Даггер
     if(daggerCooldown > 0) {
       daggerBtn.classList.add('disabled');
       daggerCooldownEl.style.display = 'flex';
@@ -708,109 +832,168 @@ function normalizeKey(key) {
       daggerCooldownEl.style.display = 'none';
       daggerBtn.title = `Даггер (Blink) (${keyBinds.dagger.toUpperCase()})`;
     }
+    // Лазер
+    if(laserCooldown > 0) {
+      laserBtn.classList.add('disabled');
+      laserCooldownEl.style.display = 'flex';
+      laserCooldownEl.textContent = Math.ceil(laserCooldown);
+      laserBtn.title = `Лазер (Cooldown ${Math.ceil(laserCooldown)}s) (${keyBinds.laser.toUpperCase()})`;
+    } else {
+      laserBtn.classList.remove('disabled');
+      laserCooldownEl.style.display = 'none';
+      laserBtn.title = `Лазер (${keyBinds.laser.toUpperCase()})`;
+    }
   }
 
   daggerBtn.onclick = () => { if(gameRunning) useDagger(); };
   rocketBtn.onclick = () => { if(gameRunning) tryLaunchRockets(); };
   rearmBtn.onclick = () => { if(gameRunning) tryRearm(); };
+  laserBtn.onclick = () => { if(gameRunning) useLaser(); };
 
   window.addEventListener('keydown', e => {
     if(!gameRunning) return;
     if(e.repeat) return;
     const key = normalizeKey(e.key);
-    if(key === keyBinds.dagger) useDagger();
-    else if(key === keyBinds.rocket) tryLaunchRockets();
-    else if(key === keyBinds.rearm) tryRearm();
+    if(matchesBind(keyBinds.dagger, key)) useDagger();
+    else if(matchesBind(keyBinds.rocket, key)) tryLaunchRockets();
+    else if(matchesBind(keyBinds.rearm, key)) tryRearm();
+    else if(matchesBind(keyBinds.laser, key)) useLaser();
   });
 
   window.addEventListener('mousemove', e => {
-  // Сенсорное управление на телефонах
-  window.addEventListener('touchmove', e => {
-    if (!canMoveMouse || !gameRunning) return;
-    if (e.touches.length > 0) {
-      const touch = e.touches[0];
-      mousePos.x = touch.clientX;
-      mousePos.y = touch.clientY;
-    }
-  });
-
-    if(!canMoveMouse) return;
+    if(!canMoveMouse || !gameRunning) return;
     mousePos.x = e.clientX;
     mousePos.y = e.clientY;
   });
 
-  function gameLoop(ts) {
-    if (!gameRunning) return;
-    const dt = (ts - lastTime) / 1000;
-    lastTime = ts;
-
-    if(rocketCooldown > 0) rocketCooldown = Math.max(0, rocketCooldown - dt);
-    if(rearmCooldown > 0) rearmCooldown = Math.max(0, rearmCooldown - dt);
-    if(daggerCooldown > 0) daggerCooldown = Math.max(0, daggerCooldown - dt);
-    updateCooldownUI();
-
-    enemies.forEach(enemy => enemy.update(dt));
-    rockets.forEach(r => r.update(dt));
-
-    rockets = rockets.filter(r => r.alive);
-    enemies = enemies.filter(e => e.alive);
-
-    waveTimer += dt * 1000;
-    if(waveTimer > waveInterval) {
-      spawnWave();
-      waveTimer = 0;
+  // Сенсорное управление (для мобильных)
+  window.addEventListener('touchmove', e => {
+    if(!canMoveMouse || !gameRunning) return;
+    if(e.touches.length > 0) {
+      const t = e.touches[0];
+      mousePos.x = t.clientX;
+      mousePos.y = t.clientY;
     }
+  });
 
-    for(let enemy of enemies) {
-      if(dist(enemy, player) < enemy.radius + player.radius) {
-        gameOver();
-        return;
-      }
-    }
+let startTime = 0;
+let ENEMY_BASE_SPEED = 130;
+let waveInterval = 6000; // можно менять со временем
 
-    // При кулдауне блинка кот идёт медленнее за курсором
-    if(daggerCooldown > 0 && canMoveMouse && !rearmActive) {
-      const dx = mousePos.x - player.x;
-      const dy = mousePos.y - player.y;
-      const distToMouse = Math.hypot(dx, dy);
-      if(distToMouse > 1) {
-        const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
-        player.x += (dx / distToMouse) * moveDist;
-        player.y += (dy / distToMouse) * moveDist;
-      }
-    } else if(canMoveMouse && !rearmActive) {
-      // Если нет кулдауна — кот не двигается по мыши, остаётся на месте
-      // (можно убрать или реализовать движение)
-    }
+function gameLoop(ts) {
+  if (!gameRunning) return;
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
 
-    ctx.clearRect(0, 0, width, height);
+  const elapsed = (ts - startTime) / 1000;
 
-    // Рисуем игрока
-    player.draw(ctx);
+  // Повышаем сложность: скорость и интервал спавна
+  const difficultyMultiplier = 1 + elapsed / 30; // каждые 30 секунд сложность растёт
+  const currentEnemySpeed = ENEMY_BASE_SPEED * difficultyMultiplier;
+  waveInterval = Math.max(1500, 6000 - elapsed * 50); // не ниже 1.5 сек
+  PLAYER_WALK_SPEED = PLAYER_BASE_SPEED * difficultyMultiplier;
 
-    // Рисуем цель блинка — без обводки, только мягкий полупрозрачный круг и иконка
-    ctx.save();
-    let dx = mousePos.x - player.x;
-    let dy = mousePos.y - player.y;
-    let distToMouse = Math.hypot(dx, dy);
-    if(distToMouse > DAGGER_MAX_RADIUS) {
-      dx = (dx / distToMouse) * DAGGER_MAX_RADIUS;
-      dy = (dy / distToMouse) * DAGGER_MAX_RADIUS;
-      distToMouse = DAGGER_MAX_RADIUS;
-    }
-    const tpX = player.x + dx;
-    const tpY = player.y + dy;
+  if(rocketCooldown > 0) rocketCooldown = Math.max(0, rocketCooldown - dt);
+  if(rearmCooldown > 0) rearmCooldown = Math.max(0, rearmCooldown - dt);
+  if(daggerCooldown > 0) daggerCooldown = Math.max(0, daggerCooldown - dt);
+  if(laserCooldown > 0) laserCooldown = Math.max(0, laserCooldown - dt);
+  updateCooldownUI();
 
-    // Иконка даггера в центре
-    ctx.drawImage(daggerImg, tpX - DAGGER_BASE_RADIUS * 0.75, tpY - DAGGER_BASE_RADIUS * 0.75, DAGGER_BASE_RADIUS * 1.5, DAGGER_BASE_RADIUS * 1.5);
+  enemies.forEach(enemy => enemy.update(dt, currentEnemySpeed));
+  rockets.forEach(r => r.update(dt));
+  rockets = rockets.filter(r => r.alive);
+  enemies = enemies.filter(e => e.alive);
 
-    ctx.restore();
+  waveTimer += dt * 1000;
+  if (waveTimer > waveInterval) {
+    spawnWave();
+    waveTimer = 0;
 
-    enemies.forEach(enemy => enemy.draw(ctx));
-    rockets.forEach(r => r.draw(ctx));
+    // Усложнение каждые 10 секунд
+    const difficultyTime = Math.floor(elapsed / 10); // каждые 10 секунд
+    ENEMY_BASE_SPEED = 130 + difficultyTime * 5;
+    PLAYER_WALK_SPEED = 135 + difficultyTime * 5;
 
-    requestAnimationFrame(gameLoop);
+    const difficultyMultiplier = 1 + elapsed / 30;
+    const currentEnemySpeed = ENEMY_BASE_SPEED * difficultyMultiplier;
   }
+
+  for(let enemy of enemies) {
+    if(dist(enemy, player) < enemy.radius + player.radius) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Движение игрока
+  if(canMoveMouse && !rearmActive) {
+  const dx = mousePos.x - player.x;
+  const dy = mousePos.y - player.y;
+  const distToMouse = Math.hypot(dx, dy);
+  if(distToMouse > 1) {
+    const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
+    player.x += (dx / distToMouse) * moveDist;
+    player.y += (dy / distToMouse) * moveDist;
+  }
+}
+
+  // Поворот при реарме
+  if(playerRotating) {
+    const elapsed = performance.now() - playerRotationStart;
+    const progress = Math.min(elapsed / PLAYER_ROTATION_DURATION, 1);
+    player.rotation = progress * 2 * Math.PI;
+    if(progress === 1) {
+      playerRotating = false;
+      player.rotation = 0;
+    }
+  }
+
+  ctx.clearRect(0, 0, width, height);
+  player.draw(ctx);
+
+  // Точка телепорта
+  ctx.save();
+  let dx = mousePos.x - player.x;
+  let dy = mousePos.y - player.y;
+  let distToMouse = Math.hypot(dx, dy);
+  if(distToMouse > DAGGER_MAX_RADIUS) {
+    dx = (dx / distToMouse) * DAGGER_MAX_RADIUS;
+    dy = (dy / distToMouse) * DAGGER_MAX_RADIUS;
+  }
+  const tpX = player.x + dx;
+  const tpY = player.y + dy;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.arc(tpX, tpY, DAGGER_BASE_RADIUS, 0, Math.PI*2);
+  ctx.fillStyle = '#4CAF50';
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.drawImage(daggerImg, tpX - DAGGER_BASE_RADIUS * 0.75, tpY - DAGGER_BASE_RADIUS * 0.75, DAGGER_BASE_RADIUS * 1.5, DAGGER_BASE_RADIUS * 1.5);
+  ctx.restore();
+
+  enemies.forEach(enemy => enemy.draw(ctx));
+  rockets.forEach(r => r.draw(ctx));
+
+  if(laserActive && laserTarget && laserTarget.alive === false) {
+    laserActiveTime += dt;
+    ctx.save();
+    ctx.strokeStyle = '#00bfff';
+    ctx.shadowColor = '#00bfff';
+    ctx.shadowBlur = 20;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(laserTarget.x, laserTarget.y);
+    ctx.stroke();
+    ctx.restore();
+    if(laserActiveTime > LASER_ACTIVE_DURATION) {
+      laserActive = false;
+      laserTarget = null;
+    }
+  }
+
+  requestAnimationFrame(gameLoop);
+}
 
   function initCanvas() {
     canvas = document.createElement('canvas');
