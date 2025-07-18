@@ -282,6 +282,26 @@
 }
 
 </style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAr2S4v_GJzrCL8ZQlY8BGqoy4xlFkSIa4",
+    authDomain: "leaderboard-kot.firebaseapp.com",
+    projectId: "leaderboard-kot",
+    databaseURL: "https://leaderboard-kot-default-rtdb.firebaseio.com",
+    storageBucket: "leaderboard-kot.firebasestorage.app",
+    messagingSenderId: "839452319812",
+    appId: "1:839452319812:web:8ad4a339aad7d2d6525c11"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+</script>
+
 </head>
 <body>
 <div id="gameContainer"></div>
@@ -289,6 +309,8 @@
 <button id="backToSiteBtn">Вернуться на сайт</button>
 
 <div id="skinSelect">
+  <input type="text" id="nicknameInput" placeholder="Введите ник" maxlength="15"
+  style="padding: 10px; font-size: 1rem; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4CAF50; background: #121212; color: #a5d6a7;">
   <h2>Выбери своего Кота</h2>
   <div id="skinOptions">
     <img src="assets/waterkot.jpg" alt="Water Kot" data-skin="water" />
@@ -337,8 +359,6 @@
     <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" style="width: 100%;" />
   </div>
 </div>
-
-
 
 <audio id="rocketLaunchSound" src="assets/rocketlaunch.mpeg"></audio>
 <audio id="rocketHitSound" src="assets/rocketcatch.mpeg"></audio>
@@ -613,13 +633,14 @@ class Rocket {
   function startGame() {
     startTime = performance.now();
     skinSelect.style.display = 'none';
+    document.getElementById('leaderboard').style.display = 'none';
     abilitiesDiv.style.display = 'flex';
     backToSiteBtn.style.display = 'block';
     score = 0;
     updateScore();
     gameRunning = true;
     player = new Player(width/2, height/2, skinImgs[selectedSkin]);
-    document.getElementById('keyBindSettings').classList.add('hidden');
+    document.getElementById('keyBindSettings').classList.add('none');
 
     enemies = [];
     rockets = [];
@@ -642,18 +663,31 @@ class Rocket {
     requestAnimationFrame(gameLoop);
   }
 
-  function gameOver() {
-    gameRunning = false;
-    abilitiesDiv.style.display = 'none';
-    message.style.display = 'block';
-    document.getElementById('keyBindSettings').classList.remove('hidden');
-  }
+async function gameOver() {
+  gameRunning = false;
+  abilitiesDiv.style.display = 'none';
+  message.style.display = 'block';
+  document.getElementById('keyBindSettings').classList.remove('hidden');
+  document.getElementById('keyBindSettings').style.display = 'block';
 
-  restartBtn.onclick = () => {
-    document.getElementById('keyBindSettings').classList.remove('hidden');
-    message.style.display = 'none';
-    startGame();
-  };
+  try {
+    await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
+    document.getElementById('leaderboard').style.display = 'block';
+    loadLeaderboard();
+        // Таблица обновится автоматически, так как onValue слушает изменения
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+restartBtn.onclick = async () => {
+  document.getElementById('keyBindSettings').classList.remove('hidden');
+  message.style.display = 'none';
+  leaderboard.style.display = 'none';  // скрываем таблицу перед стартом
+  document.getElementById('keyBindSettings').style.display = 'none';
+  startGame();
+};
+
 
   backToSiteBtn.onclick = () => {
     const targetURL = 'https://mmvlu.github.io/sapogonline/';
@@ -676,8 +710,15 @@ class Rocket {
   });
 
   startGameBtn.onclick = () => {
-    if(selectedSkin) startGame();
-  };
+  document.getElementById('keyBindSettings').style.display = 'none';
+  const nickname = document.getElementById('nicknameInput').value.trim();
+  if (!nickname) {
+    alert('Введите ник!');
+    return;
+  }
+  localStorage.setItem('playerNickname', nickname);
+  if (selectedSkin) startGame();
+};
 
   let waveTimer = 0;
   let difficultyTimer = 0;
@@ -1010,10 +1051,102 @@ function gameLoop(ts) {
     canvas.height = height;
   }
 
+function loadLeaderboard() {
+  const leaderboardList = document.getElementById("leaderboard-list");
+  leaderboardList.innerHTML = "";
+
+  const scoresRef = database.ref("scores");
+  scoresRef.on("value", (snapshot) => {
+    const scores = [];
+    snapshot.forEach((childSnapshot) => {
+      scores.push(childSnapshot.val());
+    });
+
+    // Создаем объект, чтобы хранить лучший результат по никнейму
+    const bestScoresMap = {};
+
+    scores.forEach(({name, score}) => {
+      if (!bestScoresMap[name] || score > bestScoresMap[name]) {
+        bestScoresMap[name] = score;
+      }
+    });
+
+    // Преобразуем объект обратно в массив для сортировки
+    const uniqueBestScores = Object.entries(bestScoresMap).map(([name, score]) => ({name, score}));
+
+    // Сортируем по убыванию результата
+    uniqueBestScores.sort((a, b) => b.score - a.score);
+
+    // Ограничиваем топ 10
+    const topScores = uniqueBestScores.slice(0, 10);
+
+    // Выводим таблицу
+    for (let i = 0; i < topScores.length; i++) {
+      const entry = document.createElement("div");
+      entry.textContent = `${i + 1}. ${topScores[i].name} — ${topScores[i].score}`;
+      leaderboardList.appendChild(entry);
+    }
+  });
+}
+
   loadSkins();
-  initCanvas();
+initCanvas();
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Показываем блок таблицы лидеров при загрузке страницы
+  const leaderboard = document.getElementById("leaderboard");
+  if (leaderboard) leaderboard.style.display = "block";
+
+  // Загружаем данные таблицы из Firebase
+  loadLeaderboard();
+});
+
 
 })();
 </script>
+
+<script>
+
+function saveScore(name, score) {
+  const scoresRef = database.ref("scores");
+  const newScoreRef = scoresRef.push();
+  newScoreRef.set({
+    name: name,
+    score: score,
+    timestamp: Date.now()
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadSkins();
+  initCanvas();
+
+  // Показываем блок таблицы лидеров
+  const leaderboardBlock = document.getElementById("leaderboard");
+  if (leaderboardBlock) leaderboardBlock.style.display = "block";
+
+  // Загружаем данные лидеров
+  loadLeaderboard();
+});
+
+</script>
+<!-- Leaderboard -->
+<div id="leaderboard" style="
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 15px;
+  color: #8bc34a;
+  font-size: 0.9rem;
+  max-width: 240px;
+  z-index: 1000;
+  display: none;
+">
+  <h3 style="margin-top: 0; font-size: 1.1rem;">🏆 Лидеры</h3>
+  <ul id="leaderboard-list" style="list-style: none; padding-left: 0; margin: 0;"></ul>
+</div>
+
 </body>
 </html>
