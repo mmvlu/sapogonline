@@ -1053,10 +1053,10 @@ function gameLoop(ts) {
 
 function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
-  leaderboardList.innerHTML = "";
+  document.getElementById("leaderboard-list").innerHTML = "";
 
   const scoresRef = database.ref("scores");
-  scoresRef.on("value", (snapshot) => {
+  scoresRef.once("value", (snapshot) => {
     const scores = [];
     snapshot.forEach((childSnapshot) => {
       scores.push(childSnapshot.val());
