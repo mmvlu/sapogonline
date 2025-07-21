@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Авторизация...</title>
+</head>
+<body>
+  <script>
+    function getQueryParams() {
+      const params = {};
+      window.location.search.slice(1).split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[key] = decodeURIComponent(value);
+      });
+      return params;
+    }
+
+    const tgUser = getQueryParams();
+    if (tgUser.username) {
+      localStorage.setItem("tgUser", JSON.stringify(tgUser));
+      window.location.href = "game.html";
+    } else {
+      document.body.innerHTML = "<h1>Ошибка авторизации</h1>";
+    }
+  </script>
+</body>
+</html>
