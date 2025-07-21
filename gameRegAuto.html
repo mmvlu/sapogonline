@@ -343,7 +343,6 @@
 </style>
 
 <script>
-  let database;
 
 window.addEventListener('DOMContentLoaded', () => {
   const firebaseConfig = {
@@ -1127,7 +1126,7 @@ function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
   document.getElementById("leaderboard-list").innerHTML = "";
 
-  const scoresRef = database.ref("scores");
+  const scoresRef = db.ref("scores");
   scoresRef.once("value", (snapshot) => {
     const scores = [];
     snapshot.forEach((childSnapshot) => {
@@ -1180,7 +1179,7 @@ window.addEventListener('DOMContentLoaded', () => {
 <script>
 
 function saveScore(name, score) {
-  const scoresRef = database.ref("scores");
+  const scoresRef = db.ref("scores");
   const newScoreRef = scoresRef.push();
   newScoreRef.set({
     name: name,
@@ -1194,7 +1193,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (user) {
     onTelegramAuth(user);
 
-    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
+    db.ref("users/" + user.id).once("value").then(snapshot => {
       const data = snapshot.val();
       if (data) {
         // Если хочешь, можешь использовать data.highscore и data.totalScore
