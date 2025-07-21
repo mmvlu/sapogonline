@@ -1,26 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Авторизация...</title>
+  <meta charset="UTF-8" />
+  <title>Авторизация через Telegram</title>
 </head>
 <body>
+  <h2>Авторизация...</h2>
+
   <script>
+    // Получение параметров Telegram
     function getQueryParams() {
       const params = {};
-      window.location.search.slice(1).split('&').forEach(pair => {
-        const [key, value] = pair.split('=');
-        params[key] = decodeURIComponent(value);
-      });
+      const queryString = window.location.search.substring(1);
+      const pairs = queryString.split("&");
+      for (let pair of pairs) {
+        const [key, value] = pair.split("=");
+        params[key] = decodeURIComponent(value || "");
+      }
       return params;
     }
 
     const tgUser = getQueryParams();
-    if (tgUser.username) {
+
+    // Проверяем наличие обязательного поля (можно использовать username, id или first_name)
+    if (tgUser.id || tgUser.username || tgUser.first_name) {
+      // Сохраняем данные в localStorage
       localStorage.setItem("tgUser", JSON.stringify(tgUser));
+
+      // Переход к самой игре
       window.location.href = "game.html";
     } else {
-      document.body.innerHTML = "<h1>Ошибка авторизации</h1>";
+      document.body.innerHTML = "<h1>❌ Ошибка авторизации через Telegram</h1><p>Пожалуйста, попробуйте снова.</p>";
     }
   </script>
 </body>
