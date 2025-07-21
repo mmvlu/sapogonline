@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Побег Кота</title>
+<style>
+  body, html {
+    margin:0; padding:0; height:100%; overflow: hidden;
+    background: #121212; 
+    color:#e0e0e0; 
+    font-family: Arial, sans-serif;
+    user-select: none;
+  }
+#volumeControl label {
+  color: #a5d6a7;
+  font-weight: 600;
+}
+#volumeSlider {
+  width: 100%;
+}
+  #gameContainer {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: #121212;
+  }
+  #score {
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 1.8rem; font-weight: 600;
+    z-index: 20;
+    user-select: none;
+    color: #a0a0a0;
+    text-shadow: 0 0 4px rgba(0,0,0,0.7);
+  }
+  #message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(24,24,24,0.95);
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(0,128,0,0.4);
+    text-align: center;
+    z-index: 30;
+    display: none;
+    user-select: none;
+  }
+  #message .text {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #c0c0c0;
+  }
+  #message img {
+    width: 320px;
+    border-radius: 12px;
+  }
+  #message button {
+    margin-top: 15px;
+    padding: 10px 25px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    background: #4CAF50;
+    border: none;
+    border-radius: 8px;
+    color: #121212;
+    font-weight: 700;
+    transition: background 0.3s;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #message button:hover {
+    background: #45a045;
+  }
+
+  #skinSelect {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1e1e1e;
+    padding: 25px 30px;
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(76,175,80,0.25);
+    z-index: 25;
+    text-align: center;
+  }
+  #skinSelect h2 {
+    margin-bottom: 20px;
+    font-size: 2rem;
+    color: #4CAF50;
+  }
+  #skinOptions {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+  }
+  #skinOptions img {
+    width: 140px;
+    height: 140px;
+    cursor: pointer;
+    border-radius: 16px;
+    border: 3px solid transparent;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    object-fit: contain;
+  }
+  #skinOptions img.selected {
+    border-color: #4CAF50;
+    box-shadow: 0 0 15px rgba(76,175,80,0.6);
+  }
+  #startGameBtn {
+    margin-top: 25px;
+    padding: 12px 35px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    background: #4CAF50;
+    color: #121212;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    transition: background 0.3s;
+  }
+  #startGameBtn:disabled {
+    background: #555;
+    cursor: default;
+  }
+
+  canvas {
+    display: block;
+    background: #121212;
+  }
+
+  #abilities {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 25px;
+    z-index: 25;
+  }
+  .ability-btn {
+    width: 64px;
+    height: 64px;
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(76,175,80,0.3);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    transition: filter 0.3s;
+  }
+  .ability-btn img {
+    width: 44px;
+    height: 44px;
+  }
+  .ability-btn.disabled {
+    filter: grayscale(100%) opacity(0.5);
+    cursor: default;
+  }
+  .cooldown-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.65);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #8bc34a;
+    font-weight: 700;
+    font-size: 1rem;
+    user-select: none;
+  }
+
+  #keyBindSettings {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #1e1e1e;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(76,175,80,0.25);
+    color: #8bc34a;
+    font-size: 1rem;
+    user-select: none;
+    z-index: 30;
+    max-width: 260px;
+  }
+  #keyBindSettings h3 {
+    margin: 0 0 10px 0;
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  #keyBindSettings label {
+    display: block;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  #keyBindSettings label span {
+    margin-left: 5px;
+    color: #a5d6a7;
+  }
+  #keyBindSettings input {
+    width: 30px;
+    text-align: center;
+    background: #121212;
+    border: 1px solid #4CAF50;
+    color: #4CAF50;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  #keyBindSettings input:focus {
+    outline: none;
+    border-color: #a5d6a7;
+    box-shadow: 0 0 6px #a5d6a7;
+  }
+
+  #backToSiteBtn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background: #4CAF50;
+    border: none;
+    color: #121212;
+    padding: 10px 20px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    z-index: 40;
+    transition: background 0.3s;
+  }
+  #backToSiteBtn:hover {
+    background: #45a045;
+  }
+
+@media (max-width: 768px) {
+  #abilities {
+    flex-direction: row;
+    bottom: 10px;
+    gap: 15px;
+  }
+  .ability-btn {
+    width: 56px;
+    height: 56px;
+  }
+  .ability-btn img {
+    width: 36px;
+    height: 36px;
+  }
+  #score {
+    font-size: 1.4rem;
+  }
+  #keyBindSettings {
+    display: none; /* скрыть бинды на мобилке */
+  }
+  #skinOptions {
+    flex-direction: column;
+    gap: 20px;
+  }
+  #skinOptions img {
+    width: 120px;
+    height: 120px;
+  }
+  #message img {
+    width: 260px;
+  }
+  #startGameBtn, #message button {
+    font-size: 1.1rem;
+    padding: 10px 20px;
+  }
+}
+#keyBindSettings.hidden {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#auth-submit, #auth-cancel {
+  margin-top: 10px;      /* Отступ сверху, чтобы кнопки не были вплотную */
+  padding: 10px 20px;    /* Чтобы кнопки были удобного размера */
+  font-size: 16px;       /* Увеличим размер шрифта */
+  border-radius: 6px;    /* Скруглим углы */
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+#auth-submit {
+  background-color: #28a745;   /* Синий цвет */
+  color: white;
+}
+
+#auth-submit:hover {
+  background-color: #218838;
+}
+
+#auth-cancel {
+  background-color: #555;       /* Серый */
+  color: white;
+}
+
+#auth-cancel:hover {
+  background-color: #333;
+}
+
+
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<style>
+  .btn-ui {
+    background:#222; color:#ccc; border:none; border-radius:8px; padding:10px 18px;
+    cursor:pointer; font-size:16px; transition: background 0.3s;
+  }
+  .btn-ui:hover { background:#555; }
+  #auth-block, #user-block {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center; z-index: 10000;
+  }
+  #auth-container {
+    display: none; position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #222; padding: 20px; border-radius: 12px; color: #ccc;
+    width: 320px; box-shadow: 0 0 15px #000; z-index: 11000;
+  }
+  #auth-container input {
+    width: 100%; padding: 10px; margin-bottom: 12px;
+    border: none; border-radius: 8px; background: #333; color: #eee;
+  }
+  #auth-container #auth-message {
+    color: #f55; min-height: 20px; text-align: center;
+  }
+  #user-block { display: none; color: #ccc; font-size: 18px; }
+</style>
+
+<script>
+  let database;
+
+window.addEventListener('DOMContentLoaded', () => {
+  const firebaseConfig = {
+    apiKey: "AIzaSyAr2S4v_GJzrCL8ZQlY8BGqoy4xlFkSIa4",
+    authDomain: "leaderboard-kot.firebaseapp.com",
+    projectId: "leaderboard-kot",
+    databaseURL: "https://leaderboard-kot-default-rtdb.firebaseio.com",
+    storageBucket: "leaderboard-kot.firebasestorage.app",
+    messagingSenderId: "839452319812",
+    appId: "1:839452319812:web:8ad4a339aad7d2d6525c11"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  database = firebase.database();
+});
+</script>
+</head>
+
+<body>
+<div id="gameContainer"></div>
+
+<button id="backToSiteBtn">Вернуться на сайт</button>
+
+<div id="skinSelect">
+  <input type="text" id="nicknameInput" placeholder="Введите ник" maxlength="15"
+  style="padding: 10px; font-size: 1rem; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4CAF50; background: #121212; color: #a5d6a7;">
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // Восстановление пользователя из localStorage:
+const savedNick = localStorage.getItem('nickname');
+if (savedNick) {
+  currentUser = savedNick;
+  updateUserUI();
+}
+  });
+</script>
+  <h2>Выбери своего Кота</h2>
+  <div id="skinOptions">
+    <img src="assets/waterkot.jpg" alt="Water Kot" data-skin="water" />
+    <img src="assets/gyrokot.png" alt="Gyro Kot" data-skin="gyro" />
+  </div>
+  <button id="startGameBtn" disabled>Нажмите, чтобы начать</button>
+</div>
+
+<div id="score">Очки: 0</div>
+
+<div id="message">
+  <div class="text">Кот попался!</div>
+  <img src="assets/gifkot.gif" alt="Кот попался" />
+  <button id="restartBtn">Начать заново</button>
+</div>
+
+<div id="abilities" style="display:none;">
+  <div class="ability-btn" id="daggerBtn" title="Даггер (Blink) (V)">
+    <img src="assets/dagger.png" alt="Даггер" />
+    <div class="cooldown-overlay" id="daggerCooldown" style="display:none;">15</div>
+  </div>
+  <div class="ability-btn" id="laserBtn" title="Лазер (Q)">
+    <img src="assets/laser.png" alt="Лазер" />
+    <div class="cooldown-overlay" id="laserCooldown" style="display:none;">16</div>
+  </div>
+  <div class="ability-btn" id="rocketBtn" title="Ракеты (W)">
+    <img src="assets/raketa.png" alt="Ракеты" />
+    <div class="cooldown-overlay" id="rocketCooldown" style="display:none;">25</div>
+  </div>
+  <div class="ability-btn" id="rearmBtn" title="Реарм (R)">
+    <img src="assets/Rearm.png" alt="Реарм" />
+    <div class="cooldown-overlay" id="rearmCooldown" style="display:none;">5</div>
+  </div>
+</div>
+
+<div id="keyBindSettings">
+  <h3>Настройка биндов</h3>
+  <label>Даггер (Blink): <input type="text" id="bindDagger" maxlength="1" /></label>
+  <label>Лазер: <input type="text" id="bindLaser" maxlength="1" /></label>
+  <label>Ракеты: <input type="text" id="bindRocket" maxlength="1" /></label>
+  <label>Реарм: <input type="text" id="bindRearm" maxlength="1" /></label>
+  <small>Нажмите на поле и выберите клавишу</small>
+
+  <div id="volumeControl" style="margin-top:15px;">
+    <label for="volumeSlider">Громкость:</label><br>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" style="width: 100%;" />
+  </div>
+</div>
+
+<audio id="rocketLaunchSound" src="assets/rocketlaunch.mpeg"></audio>
+<audio id="rocketHitSound" src="assets/rocketcatch.mpeg"></audio>
+<audio id="rearmSound" src="assets/Rearm3.mpeg"></audio>
+<audio id="teleportSound" src="assets/teleport.mpeg"></audio>
+<audio id="laserSound" src="assets/Laseruse.mp3"></audio>
+
+<script>
+(() => {
+  const rusToEng = {
+  'й': 'q', 'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y', 'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p',
+  'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l',
+  'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'и': 'b', 'т': 'n', 'ь': 'm'
+};
+
+function normalizeKey(key) {
+  key = key.toLowerCase();
+  if (key.length !== 1) return key;
+  if (rusToEng[key]) return rusToEng[key];
+  return key;
+}
+
+const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k]));
+
+  const container = document.getElementById('gameContainer');
+  const skinSelect = document.getElementById('skinSelect');
+  const skinOptions = skinSelect.querySelectorAll('#skinOptions img');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const scoreEl = document.getElementById('score');
+  const message = document.getElementById('message');
+  const restartBtn = document.getElementById('restartBtn');
+  const abilitiesDiv = document.getElementById('abilities');
+  const daggerBtn = document.getElementById('daggerBtn');
+  const rocketBtn = document.getElementById('rocketBtn');
+  const rearmBtn = document.getElementById('rearmBtn');
+  const laserBtn = document.getElementById('laserBtn');
+  const daggerCooldownEl = document.getElementById('daggerCooldown');
+  const rocketCooldownEl = document.getElementById('rocketCooldown');
+  const rearmCooldownEl = document.getElementById('rearmCooldown');
+  const laserCooldownEl = document.getElementById('laserCooldown');
+  const backToSiteBtn = document.getElementById('backToSiteBtn');
+
+  const bindDaggerInput = document.getElementById('bindDagger');
+  const bindRocketInput = document.getElementById('bindRocket');
+  const bindRearmInput = document.getElementById('bindRearm');
+  const bindLaserInput = document.getElementById('bindLaser');
+
+  let keyBinds = {
+    dagger: localStorage.getItem('bindDagger') || 'v',
+    rocket: localStorage.getItem('bindRocket') || 'w',
+    rearm: localStorage.getItem('bindRearm') || 'r',
+    laser: localStorage.getItem('bindLaser') || 'q',
+  };
+
+  function matchesBind(bind, keyPressed) {
+    if (!bind) return false;
+    const rusEquivalent = engToRus[bind];
+    return keyPressed === bind || keyPressed === rusEquivalent;
+  }
+
+  bindDaggerInput.value = keyBinds.dagger.toUpperCase();
+  bindRocketInput.value = keyBinds.rocket.toUpperCase();
+  bindRearmInput.value = keyBinds.rearm.toUpperCase();
+  bindLaserInput.value = keyBinds.laser.toUpperCase();
+
+  function setupBindInput(input, keyName) {
+    input.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      let k = e.key.toLowerCase();
+      if(k.length === 1 && k.match(/[a-z0-9]/)) {
+        keyBinds[keyName] = k;
+        localStorage.setItem('bind' + keyName.charAt(0).toUpperCase() + keyName.slice(1), k);
+        input.value = k.toUpperCase();
+        updateCooldownUI(); // обновить тултипы с биндами
+      }
+    });
+  }
+
+  setupBindInput(bindDaggerInput, 'dagger');
+  setupBindInput(bindRocketInput, 'rocket');
+  setupBindInput(bindRearmInput, 'rearm');
+  setupBindInput(bindLaserInput, 'laser');
+
+  let selectedSkin = null;
+  window.score = 0;
+  let canvas, ctx;
+  let width, height;
+  let player = null;
+  let enemies = [];
+  let rockets = [];
+  let lastTime = 0;
+  let score = 0;
+  let gameRunning = false;
+
+  let rocketCooldown = 0;
+  let rearmCooldown = 0;
+  let daggerCooldown = 0;
+  let laserCooldown = 0;
+
+  let mousePos = {x: 0, y: 0};
+  let canMoveMouse = true;
+  let rearmActive = false;
+
+  // Для анимации лазера
+  let laserActive = false;
+  let laserActiveTime = 0;
+  const LASER_ACTIVE_DURATION = 0.15; // секунды
+  let laserTarget = null;
+
+  // Для анимации поворота игрока при реарме
+  let playerRotation = 0;
+  let playerRotating = false;
+  let playerRotationStart = 0;
+  const PLAYER_ROTATION_DURATION = 1000; // мс
+
+  const PLAYER_RADIUS = 40;
+  const ENEMY_RADIUS = 30;
+  const DAGGER_BASE_RADIUS = 40; 
+  const DAGGER_MAX_RADIUS = DAGGER_BASE_RADIUS * 8; // 8 радиусов
+  const ROCKET_SPEED = 500;
+  let ENEMY_SPEED = 130;
+  let PLAYER_BASE_SPEED = 135;
+  let PLAYER_WALK_SPEED = PLAYER_BASE_SPEED;
+
+  const skinImgs = {};
+  let daggerImg = new Image();
+  daggerImg.src = 'assets/dagger.png';
+
+  let enemyImg = new Image();
+  enemyImg.src = 'assets/voy.png';
+
+  let rocketImg = new Image();
+  rocketImg.src = 'assets/raketa.png';
+
+  let rearmImg = new Image();
+  rearmImg.src = 'assets/Rearm.png';
+
+  let laserImg = new Image();
+  laserImg.src = 'assets/laser.png';
+
+  const sounds = {
+    rocketLaunch: document.getElementById('rocketLaunchSound'),
+    rocketHit: document.getElementById('rocketHitSound'),
+    rearm: document.getElementById('rearmSound'),
+    teleport: document.getElementById('teleportSound'),
+    laser: document.getElementById('laserSound')
+  };
+
+  const volumeSlider = document.getElementById('volumeSlider');
+
+// Функция установки громкости на все звуки
+function setVolume(value) {
+  Object.values(sounds).forEach(sound => {
+    sound.volume = value;
+  });
+}
+
+// Изначально установим громкость из ползунка
+setVolume(volumeSlider.value);
+
+// Обработчик изменения ползунка
+volumeSlider.addEventListener('input', (e) => {
+  setVolume(e.target.value);
+});
+
+
+  function dist(a,b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function updateScore() {
+    scoreEl.textContent = `Очки: ${score}`;
+  }
+
+  function loadSkins() {
+    const waterImg = new Image();
+    waterImg.src = 'assets/waterkot.jpg';
+    skinImgs['water'] = waterImg;
+    const gyroImg = new Image();
+    gyroImg.src = 'assets/gyrokot.png';
+    skinImgs['gyro'] = gyroImg;
+  }
+
+  class Player {
+    constructor(x, y, skin) {
+      this.x = x;
+      this.y = y;
+      this.radius = PLAYER_RADIUS;
+      this.skin = skin;
+      this.rotation = 0; // угол поворота в радианах для анимации реарма
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.clip();
+
+      ctx.drawImage(this.skin, -this.radius, -this.radius, this.radius*2, this.radius*2);
+      ctx.restore();
+    }
+  }
+
+  class Enemy {
+    constructor(x,y) {
+      this.x = x;
+      this.y = y;
+      this.radius = ENEMY_RADIUS;
+      this.speed = ENEMY_SPEED;
+      this.alive = true;
+    }
+    update(dt, speedOverride = null) {
+  if(!this.alive) return;
+  const dx = player.x - this.x;
+  const dy = player.y - this.y;
+  const distToPlayer = Math.hypot(dx, dy);
+  const speed = speedOverride ?? this.speed;
+  if(distToPlayer > 0) {
+    this.x += (dx / distToPlayer) * speed * dt;
+    this.y += (dy / distToPlayer) * speed * dt;
+  }
+}
+    draw(ctx) {
+      if(!this.alive) return;
+      ctx.drawImage(enemyImg, this.x - this.radius, this.y - this.radius, this.radius*2, this.radius*2);
+    }
+  }
+
+class Rocket {
+  constructor(x,y,target) {
+    this.x = x;
+    this.y = y;
+    this.radius = 14;
+    this.speed = ROCKET_SPEED;
+    this.target = target;
+    this.alive = true;
+  }
+  update(dt) {
+    if(!this.alive) return;
+    if(!this.target || !this.target.alive) {
+      this.alive = false;
+      return;
+    }
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const distToTarget = Math.hypot(dx, dy);
+    if(distToTarget < this.radius + this.target.radius) {
+      // Попадание
+      this.target.alive = false;
+      this.alive = false;
+      score++;
+      updateScore();
+      sounds.rocketHit.play();
+    } else {
+      this.x += (dx / distToTarget) * this.speed * dt;
+      this.y += (dy / distToTarget) * this.speed * dt;
+    }
+  }
+  draw(ctx) {
+    if(!this.alive) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#e53935';
+    ctx.fillRect(-10, -2, 20, 4); // Прямоугольная ракета
+    ctx.restore();
+  }
+}
+
+  function startGame() {
+    startTime = performance.now();
+    skinSelect.style.display = 'none';
+    document.getElementById('leaderboard').style.display = 'none';
+    abilitiesDiv.style.display = 'flex';
+    backToSiteBtn.style.display = 'block';
+    score = 0;
+    updateScore();
+    gameRunning = true;
+    player = new Player(width/2, height/2, skinImgs[selectedSkin]);
+    document.getElementById('keyBindSettings').classList.add('none');
+
+    enemies = [];
+    rockets = [];
+
+    rocketCooldown = 0;
+    rearmCooldown = 0;
+    daggerCooldown = 0;
+    laserCooldown = 0;
+
+    rearmActive = false;
+
+    canMoveMouse = true;
+    lastTime = performance.now();
+    waveTimer = 0;
+
+    playerRotation = 0;
+    playerRotating = false;
+    player.rotation = 0;
+
+    requestAnimationFrame(gameLoop);
+  }
+
+async function gameOver() {
+  gameRunning = false;
+  abilitiesDiv.style.display = 'none';
+  message.style.display = 'block';
+  document.getElementById('keyBindSettings').classList.remove('hidden');
+  document.getElementById('keyBindSettings').style.display = 'block';
+  onGameEnd();
+  try {
+    await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
+    document.getElementById('leaderboard').style.display = 'block';
+    loadLeaderboard();
+        // Таблица обновится автоматически, так как onValue слушает изменения
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+restartBtn.onclick = async () => {
+  onGameStart();
+  document.getElementById('keyBindSettings').classList.remove('hidden');
+  message.style.display = 'none';
+  leaderboard.style.display = 'none';  // скрываем таблицу перед стартом
+  document.getElementById('keyBindSettings').style.display = 'none';
+  startGame();
+};
+
+
+  backToSiteBtn.onclick = () => {
+    const targetURL = 'https://mmvlu.github.io/sapogonline/';
+    if (gameRunning) {
+      if(confirm('Вы действительно хотите выйти из игры и вернуться на сайт? Прогресс будет потерян.')) {
+        location.href = targetURL;
+      }
+    } else {
+      location.href = targetURL;
+    }
+  };
+
+  skinOptions.forEach(img => {
+    img.addEventListener('click', () => {
+      skinOptions.forEach(i => i.classList.remove('selected'));
+      img.classList.add('selected');
+      selectedSkin = img.dataset.skin;
+      startGameBtn.disabled = false;
+    });
+  });
+
+  startGameBtn.onclick = () => {
+  document.getElementById('keyBindSettings').style.display = 'none';
+  const nickname = document.getElementById('nicknameInput').value.trim();
+  if (!nickname) {
+    alert('Введите ник!');
+    return;
+  }
+  localStorage.setItem('playerNickname', nickname);
+  if (selectedSkin) startGame();
+};
+
+  let waveTimer = 0;
+  let difficultyTimer = 0;
+  let difficultyLevel = 0;
+  let currentWaveInterval = 6000; // миллисекунд
+
+function spawnWave() {
+  if (!gameRunning) return;
+
+  const elapsedSeconds = (performance.now() - startTime) / 1000;
+  const waveSize = 3 + Math.floor(elapsedSeconds / 15); // увеличиваем количество врагов
+  for(let i = 0; i < waveSize; i++) {
+    const side = Math.floor(Math.random()*4);
+    let x, y;
+    switch(side) {
+      case 0: x = -ENEMY_RADIUS; y = Math.random()*height; break;
+      case 1: x = Math.random()*width; y = -ENEMY_RADIUS; break;
+      case 2: x = width + ENEMY_RADIUS; y = Math.random()*height; break;
+      case 3: x = Math.random()*width; y = height + ENEMY_RADIUS; break;
+    }
+    enemies.push(new Enemy(x,y));
+  }
+}
+
+  function tryLaunchRockets() {
+    if (rocketCooldown > 0 || rearmActive || !gameRunning) return;
+    const aliveEnemies = enemies.filter(e => e.alive);
+    if (aliveEnemies.length === 0) return;
+
+    aliveEnemies.sort((a,b) => dist(a, player) - dist(b, player));
+
+    const rocketsCanLaunch = 2 - rockets.length;
+    if (rocketsCanLaunch <= 0) return;
+
+    for(let i=0; i<rocketsCanLaunch && i < aliveEnemies.length; i++) {
+      rockets.push(new Rocket(player.x, player.y, aliveEnemies[i]));
+    }
+    if (rocketsCanLaunch > 0) {
+      sounds.rocketLaunch.play();
+      rocketCooldown = 25;
+      updateCooldownUI();
+    }
+  }
+
+  function tryRearm() {
+    if (rearmCooldown > 0 || rearmActive || !gameRunning) return;
+
+    rearmActive = true;
+    canMoveMouse = false;
+
+    rocketCooldown = 0;
+    rearmCooldown = 0;
+    daggerCooldown = 0;
+    laserCooldown = 0; // Сбрасываем кулдаун лазера при реарме
+
+    sounds.rearm.play();
+    updateCooldownUI();
+
+    // Запускаем анимацию вращения игрока 360°
+    playerRotating = true;
+    playerRotationStart = performance.now();
+
+    setTimeout(() => {
+      rearmActive = false;
+      canMoveMouse = true;
+      playerRotating = false;
+      player.rotation = 0;
+    }, 1250); // блокировка — 1.25 секунды (1250 мс)
+  }
+
+  function useDagger() {
+    if(daggerCooldown > 0 || rearmActive || !gameRunning) return;
+
+    const dx = mousePos.x - player.x;
+    const dy = mousePos.y - player.y;
+    const distance = Math.hypot(dx, dy);
+    if(distance === 0) return;
+
+    const tpDist = Math.min(distance, DAGGER_MAX_RADIUS);
+    const dirX = dx / distance;
+    const dirY = dy / distance;
+
+    player.x += dirX * tpDist;
+    player.y += dirY * tpDist;
+
+    sounds.teleport.play();
+
+    daggerCooldown = 15;
+    updateCooldownUI();
+  }
+
+  function useLaser() {
+    if(laserCooldown > 0 || rearmActive || !gameRunning) return;
+
+    // Найдём врага под мышью
+    laserTarget = null;
+    for(let enemy of enemies) {
+      if(enemy.alive && dist(enemy, mousePos) < enemy.radius) {
+        laserTarget = enemy;
+        break;
+      }
+    }
+
+    if(!laserTarget) return; // нет цели
+
+    // Убить цель
+    laserTarget.alive = false;
+    score++;
+    updateScore();
+
+    // Запускаем звук и анимацию
+    sounds.laser.currentTime = 0;
+    sounds.laser.play();
+    laserActive = true;
+    laserActiveTime = 0;
+
+    laserCooldown = 16;
+    updateCooldownUI();
+  }
+
+  function updateCooldownUI() {
+    // Ракеты
+    if(rocketCooldown > 0) {
+      rocketBtn.classList.add('disabled');
+      rocketCooldownEl.style.display = 'flex';
+      rocketCooldownEl.textContent = Math.ceil(rocketCooldown);
+      rocketBtn.title = `Ракеты (Cooldown ${Math.ceil(rocketCooldown)}s) (${keyBinds.rocket.toUpperCase()})`;
+    } else {
+      rocketBtn.classList.remove('disabled');
+      rocketCooldownEl.style.display = 'none';
+      rocketBtn.title = `Ракеты (${keyBinds.rocket.toUpperCase()})`;
+    }
+    // Реарм
+    if(rearmCooldown > 0) {
+      rearmBtn.classList.add('disabled');
+      rearmCooldownEl.style.display = 'flex';
+      rearmCooldownEl.textContent = Math.ceil(rearmCooldown);
+      rearmBtn.title = `Реарм (Cooldown ${Math.ceil(rearmCooldown)}s) (${keyBinds.rearm.toUpperCase()})`;
+    } else {
+      rearmBtn.classList.remove('disabled');
+      rearmCooldownEl.style.display = 'none';
+      rearmBtn.title = `Реарм (${keyBinds.rearm.toUpperCase()})`;
+    }
+    // Даггер
+    if(daggerCooldown > 0) {
+      daggerBtn.classList.add('disabled');
+      daggerCooldownEl.style.display = 'flex';
+      daggerCooldownEl.textContent = Math.ceil(daggerCooldown);
+      daggerBtn.title = `Даггер (Blink) (Cooldown ${Math.ceil(daggerCooldown)}s) (${keyBinds.dagger.toUpperCase()})`;
+    } else {
+      daggerBtn.classList.remove('disabled');
+      daggerCooldownEl.style.display = 'none';
+      daggerBtn.title = `Даггер (Blink) (${keyBinds.dagger.toUpperCase()})`;
+    }
+    // Лазер
+    if(laserCooldown > 0) {
+      laserBtn.classList.add('disabled');
+      laserCooldownEl.style.display = 'flex';
+      laserCooldownEl.textContent = Math.ceil(laserCooldown);
+      laserBtn.title = `Лазер (Cooldown ${Math.ceil(laserCooldown)}s) (${keyBinds.laser.toUpperCase()})`;
+    } else {
+      laserBtn.classList.remove('disabled');
+      laserCooldownEl.style.display = 'none';
+      laserBtn.title = `Лазер (${keyBinds.laser.toUpperCase()})`;
+    }
+  }
+
+  daggerBtn.onclick = () => { if(gameRunning) useDagger(); };
+  rocketBtn.onclick = () => { if(gameRunning) tryLaunchRockets(); };
+  rearmBtn.onclick = () => { if(gameRunning) tryRearm(); };
+  laserBtn.onclick = () => { if(gameRunning) useLaser(); };
+
+  window.addEventListener('keydown', e => {
+    if(!gameRunning) return;
+    if(e.repeat) return;
+    const key = normalizeKey(e.key);
+    if(matchesBind(keyBinds.dagger, key)) useDagger();
+    else if(matchesBind(keyBinds.rocket, key)) tryLaunchRockets();
+    else if(matchesBind(keyBinds.rearm, key)) tryRearm();
+    else if(matchesBind(keyBinds.laser, key)) useLaser();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if(!canMoveMouse || !gameRunning) return;
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+  });
+
+  // Сенсорное управление (для мобильных)
+  window.addEventListener('touchmove', e => {
+    if(!canMoveMouse || !gameRunning) return;
+    if(e.touches.length > 0) {
+      const t = e.touches[0];
+      mousePos.x = t.clientX;
+      mousePos.y = t.clientY;
+    }
+  });
+
+let startTime = 0;
+let ENEMY_BASE_SPEED = 130;
+let waveInterval = 6000; // можно менять со временем
+
+function gameLoop(ts) {
+  if (!gameRunning) return;
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+
+  const elapsed = (ts - startTime) / 1000;
+
+  // Повышаем сложность: скорость и интервал спавна
+  const difficultyMultiplier = 1 + elapsed / 30; // каждые 30 секунд сложность растёт
+  const currentEnemySpeed = ENEMY_BASE_SPEED * difficultyMultiplier;
+  waveInterval = Math.max(1500, 6000 - elapsed * 50); // не ниже 1.5 сек
+  PLAYER_WALK_SPEED = PLAYER_BASE_SPEED * difficultyMultiplier;
+
+  if(rocketCooldown > 0) rocketCooldown = Math.max(0, rocketCooldown - dt);
+  if(rearmCooldown > 0) rearmCooldown = Math.max(0, rearmCooldown - dt);
+  if(daggerCooldown > 0) daggerCooldown = Math.max(0, daggerCooldown - dt);
+  if(laserCooldown > 0) laserCooldown = Math.max(0, laserCooldown - dt);
+  updateCooldownUI();
+
+  enemies.forEach(enemy => enemy.update(dt, currentEnemySpeed));
+  rockets.forEach(r => r.update(dt));
+  rockets = rockets.filter(r => r.alive);
+  enemies = enemies.filter(e => e.alive);
+  window.score += 1;
+
+  waveTimer += dt * 1000;
+  if (waveTimer > waveInterval) {
+    spawnWave();
+    waveTimer = 0;
+
+    // Усложнение каждые 10 секунд
+    const difficultyTime = Math.floor(elapsed / 10); // каждые 10 секунд
+    ENEMY_BASE_SPEED = 130 + difficultyTime * 5;
+    PLAYER_WALK_SPEED = 135 + difficultyTime * 5;
+
+    const difficultyMultiplier = 1 + elapsed / 30;
+    const currentEnemySpeed = ENEMY_BASE_SPEED * difficultyMultiplier;
+  }
+
+  for(let enemy of enemies) {
+    if(dist(enemy, player) < enemy.radius + player.radius) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Движение игрока
+  if(canMoveMouse && !rearmActive) {
+  const dx = mousePos.x - player.x;
+  const dy = mousePos.y - player.y;
+  const distToMouse = Math.hypot(dx, dy);
+  if(distToMouse > 1) {
+    const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
+    player.x += (dx / distToMouse) * moveDist;
+    player.y += (dy / distToMouse) * moveDist;
+  }
+}
+
+  // Поворот при реарме
+  if(playerRotating) {
+    const elapsed = performance.now() - playerRotationStart;
+    const progress = Math.min(elapsed / PLAYER_ROTATION_DURATION, 1);
+    player.rotation = progress * 2 * Math.PI;
+    if(progress === 1) {
+      playerRotating = false;
+      player.rotation = 0;
+    }
+  }
+
+  ctx.clearRect(0, 0, width, height);
+  player.draw(ctx);
+
+  // Точка телепорта
+  ctx.save();
+  let dx = mousePos.x - player.x;
+  let dy = mousePos.y - player.y;
+  let distToMouse = Math.hypot(dx, dy);
+  if(distToMouse > DAGGER_MAX_RADIUS) {
+    dx = (dx / distToMouse) * DAGGER_MAX_RADIUS;
+    dy = (dy / distToMouse) * DAGGER_MAX_RADIUS;
+  }
+  const tpX = player.x + dx;
+  const tpY = player.y + dy;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.arc(tpX, tpY, DAGGER_BASE_RADIUS, 0, Math.PI*2);
+  ctx.fillStyle = '#4CAF50';
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.drawImage(daggerImg, tpX - DAGGER_BASE_RADIUS * 0.75, tpY - DAGGER_BASE_RADIUS * 0.75, DAGGER_BASE_RADIUS * 1.5, DAGGER_BASE_RADIUS * 1.5);
+  ctx.restore();
+
+  enemies.forEach(enemy => enemy.draw(ctx));
+  rockets.forEach(r => r.draw(ctx));
+
+  if(laserActive && laserTarget && laserTarget.alive === false) {
+    laserActiveTime += dt;
+    ctx.save();
+    ctx.strokeStyle = '#00bfff';
+    ctx.shadowColor = '#00bfff';
+    ctx.shadowBlur = 20;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(laserTarget.x, laserTarget.y);
+    ctx.stroke();
+    ctx.restore();
+    if(laserActiveTime > LASER_ACTIVE_DURATION) {
+      laserActive = false;
+      laserTarget = null;
+    }
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+  function initCanvas() {
+    canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+  }
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+function loadLeaderboard() {
+  const leaderboardList = document.getElementById("leaderboard-list");
+  document.getElementById("leaderboard-list").innerHTML = "";
+
+  const scoresRef = database.ref("scores");
+  scoresRef.once("value", (snapshot) => {
+    const scores = [];
+    snapshot.forEach((childSnapshot) => {
+      scores.push(childSnapshot.val());
+    });
+
+    // Создаем объект, чтобы хранить лучший результат по никнейму
+    const bestScoresMap = {};
+
+    scores.forEach(({name, score}) => {
+      if (!bestScoresMap[name] || score > bestScoresMap[name]) {
+        bestScoresMap[name] = score;
+      }
+    });
+
+    // Преобразуем объект обратно в массив для сортировки
+    const uniqueBestScores = Object.entries(bestScoresMap).map(([name, score]) => ({name, score}));
+
+    // Сортируем по убыванию результата
+    uniqueBestScores.sort((a, b) => b.score - a.score);
+
+    // Ограничиваем топ 10
+    const topScores = uniqueBestScores.slice(0, 10);
+
+    // Выводим таблицу
+    for (let i = 0; i < topScores.length; i++) {
+      const entry = document.createElement("div");
+      entry.textContent = `${i + 1}. ${topScores[i].name} — ${topScores[i].score}`;
+      leaderboardList.appendChild(entry);
+    }
+  });
+}
+
+  loadSkins();
+initCanvas();
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Показываем блок таблицы лидеров при загрузке страницы
+  const leaderboard = document.getElementById("leaderboard");
+  if (leaderboard) leaderboard.style.display = "block";
+
+  // Загружаем данные таблицы из Firebase
+  loadLeaderboard();
+});
+
+
+})();
+</script>
+
+<script>
+
+function saveScore(name, score) {
+  const scoresRef = database.ref("scores");
+  const newScoreRef = scoresRef.push();
+  newScoreRef.set({
+    name: name,
+    score: score,
+    timestamp: Date.now()
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const user = JSON.parse(localStorage.getItem("tg_user"));
+  if (user) {
+    showUser(user);
+
+    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        // Если хочешь, можешь использовать data.highscore и data.totalScore
+        console.log("Загруженные очки:", data.highscore, data.totalScore);
+      }
+    });
+  }
+});
+
+  loadSkins();
+  initCanvas();
+
+  // Показываем блок таблицы лидеров
+  const leaderboardBlock = document.getElementById("leaderboard");
+  if (leaderboardBlock) leaderboardBlock.style.display = "block";
+
+  // Загружаем данные лидеров
+  loadLeaderboard();
+
+</script>
+<!-- Leaderboard -->
+<div id="leaderboard" style="
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 15px;
+  color: #8bc34a;
+  font-size: 0.9rem;
+  max-width: 240px;
+  z-index: 1000;
+  display: none;
+">
+  <h3 style="margin-top: 0; font-size: 1.1rem;">🏆 Лидеры</h3>
+  <ul id="leaderboard-list" style="list-style: none; padding-left: 0; margin: 0;"></ul>
+</div>
+
+  <!-- 1) Telegram Login Widget -->
+<div id="telegram-login" style="
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    text-align: center;
+       ">
+    <!-- сюда Telegram вставит кнопку -->
+    <script async src="https://telegram.org/js/telegram-widget.js?15"
+            data-telegram-login="KotvSapoge_bot"
+            data-size="large"
+            data-radius="12"
+            data-userpic="true"
+            data-request-access="write"
+            data-onauth="onTelegramAuth(user)">
+    </script>
+  </div>
+
+  <!-- 2. Контейнер для показа данных залогиненного пользователя -->
+  <div id="user-info"
+       style="
+         position: fixed;
+         bottom: 20px;
+         left: 200px;
+         z-index: 1000;
+         color: #fff;
+         display: none;
+         align-items: center;
+         gap: 8px;
+       ">
+    <!-- сюда telegram-login.js вставит аватар и имя -->
+  </div>
+
+  <!-- 4. Скрипт с обработчиком onTelegramAuth -->
+  <script src="telegram-login.js"></script>
+</body>
+</html>
