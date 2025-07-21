@@ -1285,86 +1285,75 @@ window.addEventListener("DOMContentLoaded", () => {
 <!-- ========== Telegram Auth & User Info ========== -->
 <div id="authArea" style="text-align:center; margin:20px 0;">
   <!-- 1) Объявляем колбэк до виджета -->
-<script>
-  function onTelegramAuth(user) {
-    // 1) Сохраняем локально
-    localStorage.setItem("tg_user", JSON.stringify(user));
-    // 2) Показываем UI
-    showUser(user);
-    // 3) Пишем прогресс в Firebase
-    saveProgress(user);
-  }
-
-  function showUser(user) {
-    document.getElementById("authArea").style.display = "none";
-    document.getElementById("user-info").style.display = "flex";
-    document.getElementById("user-name").textContent = user.first_name;
-    document.getElementById("user-photo").src = user.photo_url;
-  }
-
-  function saveProgress(user) {
-    const highscore = window.score || 0;
-    const total = window.totalScore || 0;
-    db.ref("users/" + user.id).update({
-      nickname: user.first_name,
-      highscore: highscore,
-      totalScore: total,
-      lastLogin: Date.now()
-    });
-  }
-
-  // При перезагрузке, если уже залогинен
-  document.addEventListener("DOMContentLoaded", () => {
-    const saved = localStorage.getItem("tg_user");
-    if (saved) onTelegramAuth(JSON.parse(saved));
-  });
-</script>
-
-<!-- ==== Telegram Login & User Info ==== -->
-<div id="telegram-login" style="text-align:center; margin:20px 0;">
   <script>
-    // Колбэк Telegram уже не используется здесь, т.к. мы перенаправляем на auth.html
+    function onTelegramAuth(user) {
+      // Сохраняем в localStorage
+      localStorage.setItem("tg_user", JSON.stringify(user));
+      // Показываем UI
+      showUser(user);
+      // Сохраняем/обновляем прогресс в Firebase
+      saveProgress(user);
+    }
     function showUser(user) {
       document.getElementById("telegram-login").style.display = "none";
-      document.getElementById("user-info").style.display     = "flex";
-      document.getElementById("user-name").textContent        = user.first_name || user.username;
-      document.getElementById("user-photo").src               = user.photo_url;
+      document.getElementById("user-info").style.display = "flex";
+      document.getElementById("user-name").textContent = user.first_name;
+      document.getElementById("user-photo").src = user.photo_url;
     }
+    function saveProgress(user) {
+      const score = saveScore(user.first_name, window.score || 0);        // замени на твою переменную очков
+      const total = window.totalScore || 0;          // замени на твою переменную общего счёта
+      db.ref('users/' + user.id).update({
+        nickname: user.first_name,
+        highscore: score,
+        totalScore: total,
+        lastLogin: Date.now()
+      });
+    }
+    // При перезагрузке показываем, если уже влогинен
     document.addEventListener("DOMContentLoaded", () => {
       const saved = localStorage.getItem("tg_user");
       if (saved) showUser(JSON.parse(saved));
     });
   </script>
 
-  <!-- 1) Telegram Login Widget -->
-<div id="authArea" style="text-align:center; margin:20px 0;">
-  <!-- Telegram Login Widget -->
-  <script async src="https://telegram.org/js/telegram-widget.js?15"
+  <!-- 2) Сам Telegram-виджет -->
+  <script async src="https://telegram.org/js/telegram-widget.js?7"
           data-telegram-login="KotvSapoge_bot"
           data-size="large"
-          data-radius="10"
           data-userpic="true"
-          data-onauth="onTelegramAuth(user)"
-          data-request-access="write">
+          data-radius="10"
+          data-request-access="write"
+          data-auth-url="https://mmvlu.github.io/sapogonline/auth.html">
   </script>
 </div>
 
-<!-- 2) UI залогиненного пользователя -->
+<script>
+  const tgUser = JSON.parse(localStorage.getItem("tgUser"));
+  if (tgUser && tgUser.username) {
+    document.getElementById("authArea").innerHTML = `
+      <p>Привет, @${tgUser.username}!</p>
+      <a href="main.html">Перейти к игре</a>
+    `;
+  }
+</script>
+
+<!-- 3) Контейнер для отображения юзера -->
 <div id="user-info" style="display:none; align-items:center; justify-content:center; gap:10px; margin:20px 0;">
   <img id="user-photo"
        style="width:40px;height:40px;border-radius:50%;cursor:pointer;"
-       title="Нажми, чтобы выйти" />
+       title="Нажми чтобы выйти" />
   <span id="user-name" style="font-weight:bold;color:#fff;"></span>
 </div>
 
-<!-- 3) Логика выхода -->
+<!-- 4) Логика выхода -->
 <script>
   document.getElementById("user-photo").addEventListener("click", () => {
     localStorage.removeItem("tg_user");
+    // Можно очистить прогресс из UI или перезагрузить игру
     location.reload();
   });
 </script>
-<!-- ==== End Telegram ==== -->
 
 </body>
 </html>
