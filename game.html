@@ -281,13 +281,71 @@
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
+#auth-submit, #auth-cancel {
+  margin-top: 10px;      /* Отступ сверху, чтобы кнопки не были вплотную */
+  padding: 10px 20px;    /* Чтобы кнопки были удобного размера */
+  font-size: 16px;       /* Увеличим размер шрифта */
+  border-radius: 6px;    /* Скруглим углы */
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease;
+}
+
+#auth-submit {
+  background-color: #28a745;   /* Синий цвет */
+  color: white;
+}
+
+#auth-submit:hover {
+  background-color: #218838;
+}
+
+#auth-cancel {
+  background-color: #555;       /* Серый */
+  color: white;
+}
+
+#auth-cancel:hover {
+  background-color: #333;
+}
+
+
 </style>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
+<style>
+  .btn-ui {
+    background:#222; color:#ccc; border:none; border-radius:8px; padding:10px 18px;
+    cursor:pointer; font-size:16px; transition: background 0.3s;
+  }
+  .btn-ui:hover { background:#555; }
+  #auth-block, #user-block {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center; z-index: 10000;
+  }
+  #auth-container {
+    display: none; position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #222; padding: 20px; border-radius: 12px; color: #ccc;
+    width: 320px; box-shadow: 0 0 15px #000; z-index: 11000;
+  }
+  #auth-container input {
+    width: 100%; padding: 10px; margin-bottom: 12px;
+    border: none; border-radius: 8px; background: #333; color: #eee;
+  }
+  #auth-container #auth-message {
+    color: #f55; min-height: 20px; text-align: center;
+  }
+  #user-block { display: none; color: #ccc; font-size: 18px; }
+</style>
+
 <script>
+  let database;
+
+window.addEventListener('DOMContentLoaded', () => {
   const firebaseConfig = {
     apiKey: "AIzaSyAr2S4v_GJzrCL8ZQlY8BGqoy4xlFkSIa4",
     authDomain: "leaderboard-kot.firebaseapp.com",
@@ -299,7 +357,49 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+  database = firebase.database();
+
+  const authBlock = document.getElementById('auth-block');
+  const authContainer = document.getElementById('auth-container');
+  const authTitle = document.getElementById('auth-title');
+  const authPasswordInput = document.getElementById('auth-password');
+  const authMessage = document.getElementById('auth-message');
+  const authCancelBtn = document.getElementById('auth-cancel');
+
+  const userBlock = document.getElementById('user-block');
+  const userNicknameSpan = document.getElementById('user-nickname');
+  const btnLogout = document.getElementById('btn-logout');
+
+  const btnLogin = document.getElementById('btn-login');
+  const btnRegister = document.getElementById('btn-register');
+
+  let currentUser = null;
+  let currentAuthMode = 'login';
+
+window.updateUserUI = function() {
+  authContainer.style.display = 'none';
+  authBlock.style.display = 'none';
+  userNicknameSpan.textContent = currentUser; // ник возле кнопки "Выйти"
+  userBlock.style.display = 'flex';
+  authMessage.textContent = '';
+
+  const nickInput = document.getElementById('nicknameInput');
+  if (nickInput) {
+    nickInput.value = currentUser;
+  }
+};
+
+  window.onGameEnd = function() {
+    if (currentUser) {
+    userBlock.style.display = 'flex';
+    authBlock.style.display = 'none';
+  } else {
+    authBlock.style.display = 'flex';
+    userBlock.style.display = 'none';
+  }
+  authContainer.style.display = 'none'; // модалка скрыта
+  };
+});
 </script>
 
 </head>
@@ -311,6 +411,16 @@
 <div id="skinSelect">
   <input type="text" id="nicknameInput" placeholder="Введите ник" maxlength="15"
   style="padding: 10px; font-size: 1rem; margin-bottom: 15px; border-radius: 8px; border: 1px solid #4CAF50; background: #121212; color: #a5d6a7;">
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // Восстановление пользователя из localStorage:
+const savedNick = localStorage.getItem('nickname');
+if (savedNick) {
+  currentUser = savedNick;
+  updateUserUI();
+}
+  });
+</script>
   <h2>Выбери своего Кота</h2>
   <div id="skinOptions">
     <img src="assets/waterkot.jpg" alt="Water Kot" data-skin="water" />
@@ -443,6 +553,7 @@ const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k
   setupBindInput(bindLaserInput, 'laser');
 
   let selectedSkin = null;
+  window.score = 0;
   let canvas, ctx;
   let width, height;
   let player = null;
@@ -669,7 +780,7 @@ async function gameOver() {
   message.style.display = 'block';
   document.getElementById('keyBindSettings').classList.remove('hidden');
   document.getElementById('keyBindSettings').style.display = 'block';
-
+  onGameEnd();
   try {
     await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
     document.getElementById('leaderboard').style.display = 'block';
@@ -681,6 +792,7 @@ async function gameOver() {
 }
 
 restartBtn.onclick = async () => {
+  onGameStart();
   document.getElementById('keyBindSettings').classList.remove('hidden');
   message.style.display = 'none';
   leaderboard.style.display = 'none';  // скрываем таблицу перед стартом
@@ -944,6 +1056,7 @@ function gameLoop(ts) {
   rockets.forEach(r => r.update(dt));
   rockets = rockets.filter(r => r.alive);
   enemies = enemies.filter(e => e.alive);
+  window.score += 1;
 
   waveTimer += dt * 1000;
   if (waveTimer > waveInterval) {
@@ -1118,6 +1231,20 @@ function saveScore(name, score) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  const user = JSON.parse(localStorage.getItem("tg_user"));
+  if (user) {
+    showUser(user);
+
+    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        // Если хочешь, можешь использовать data.highscore и data.totalScore
+        console.log("Загруженные очки:", data.highscore, data.totalScore);
+      }
+    });
+  }
+});
+
   loadSkins();
   initCanvas();
 
@@ -1127,7 +1254,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Загружаем данные лидеров
   loadLeaderboard();
-});
 
 </script>
 <!-- Leaderboard -->
@@ -1147,6 +1273,21 @@ window.addEventListener("DOMContentLoaded", () => {
   <h3 style="margin-top: 0; font-size: 1.1rem;">🏆 Лидеры</h3>
   <ul id="leaderboard-list" style="list-style: none; padding-left: 0; margin: 0;"></ul>
 </div>
+
+  <!-- 1) Telegram Login Widget -->
+<div id="telegram-login" style="text-align:center; margin:20px;">
+  <script async src="https://telegram.org/js/telegram-widget.js?15"
+          data-telegram-login="KotvSapoge_bot"
+          data-size="large"
+          data-radius="12"
+          data-userpic="true"
+          data-request-access="write"
+          data-onauth="onTelegramAuth(user)">
+  </script>
+</div>
+
+<script src="telegram-login.js"></script>
+<div id="user-info" style="display:none; margin:20px;"></div>
 
 </body>
 </html>
