@@ -343,7 +343,6 @@
 </style>
 
 <script>
-  let db
 
 window.addEventListener('DOMContentLoaded', () => {
   const firebaseConfig = {
@@ -358,6 +357,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+  window.db = db;
 });
 </script>
 </head>
