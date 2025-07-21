@@ -1283,7 +1283,7 @@ window.addEventListener("DOMContentLoaded", () => {
 </div>
 
 <!-- ========== Telegram Auth & User Info ========== -->
-<div id="telegram-login" style="text-align:center; margin:20px 0;">
+<div id="authArea" style="text-align:center; margin:20px 0;">
   <!-- 1) Объявляем колбэк до виджета -->
   <script>
     function onTelegramAuth(user) {
@@ -1324,9 +1324,19 @@ window.addEventListener("DOMContentLoaded", () => {
           data-userpic="true"
           data-radius="10"
           data-request-access="write"
-          data-callback="onTelegramAuth">
+          data-auth-url="https://mmvlu.github.io/sapogonline/auth.html">
   </script>
 </div>
+
+<script>
+  const tgUser = JSON.parse(localStorage.getItem("tgUser"));
+  if (tgUser && tgUser.username) {
+    document.getElementById("authArea").innerHTML = `
+      <p>Привет, @${tgUser.username}!</p>
+      <a href="main.html">Перейти к игре</a>
+    `;
+  }
+</script>
 
 <!-- 3) Контейнер для отображения юзера -->
 <div id="user-info" style="display:none; align-items:center; justify-content:center; gap:10px; margin:20px 0;">
