@@ -358,51 +358,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   firebase.initializeApp(firebaseConfig);
   database = firebase.database();
-
-  const authBlock = document.getElementById('auth-block');
-  const authContainer = document.getElementById('auth-container');
-  const authTitle = document.getElementById('auth-title');
-  const authPasswordInput = document.getElementById('auth-password');
-  const authMessage = document.getElementById('auth-message');
-  const authCancelBtn = document.getElementById('auth-cancel');
-
-  const userBlock = document.getElementById('user-block');
-  const userNicknameSpan = document.getElementById('user-nickname');
-  const btnLogout = document.getElementById('btn-logout');
-
-  const btnLogin = document.getElementById('btn-login');
-  const btnRegister = document.getElementById('btn-register');
-
-  let currentUser = null;
-  let currentAuthMode = 'login';
-
-window.updateUserUI = function() {
-  authContainer.style.display = 'none';
-  authBlock.style.display = 'none';
-  userNicknameSpan.textContent = currentUser; // ник возле кнопки "Выйти"
-  userBlock.style.display = 'flex';
-  authMessage.textContent = '';
-
-  const nickInput = document.getElementById('nicknameInput');
-  if (nickInput) {
-    nickInput.value = currentUser;
-  }
-};
-
-  window.onGameEnd = function() {
-    if (currentUser) {
-    userBlock.style.display = 'flex';
-    authBlock.style.display = 'none';
-  } else {
-    authBlock.style.display = 'flex';
-    userBlock.style.display = 'none';
-  }
-  authContainer.style.display = 'none'; // модалка скрыта
-  };
 });
 </script>
-
 </head>
+
 <body>
 <div id="gameContainer"></div>
 
@@ -1275,19 +1234,41 @@ window.addEventListener("DOMContentLoaded", () => {
 </div>
 
   <!-- 1) Telegram Login Widget -->
-<div id="telegram-login" style="text-align:center; margin:20px;">
-  <script async src="https://telegram.org/js/telegram-widget.js?15"
-          data-telegram-login="KotvSapoge_bot"
-          data-size="large"
-          data-radius="12"
-          data-userpic="true"
-          data-request-access="write"
-          data-onauth="onTelegramAuth(user)">
-  </script>
-</div>
+<div id="telegram-login" style="
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    text-align: center;
+       ">
+    <!-- сюда Telegram вставит кнопку -->
+    <script async src="https://telegram.org/js/telegram-widget.js?15"
+            data-telegram-login="KotvSapoge_bot"
+            data-size="large"
+            data-radius="12"
+            data-userpic="true"
+            data-request-access="write"
+            data-onauth="onTelegramAuth(user)">
+    </script>
+  </div>
 
-<script src="telegram-login.js"></script>
-<div id="user-info" style="display:none; margin:20px;"></div>
+  <!-- 2. Контейнер для показа данных залогиненного пользователя -->
+  <div id="user-info"
+       style="
+         position: fixed;
+         bottom: 20px;
+         left: 200px;
+         z-index: 1000;
+         color: #fff;
+         display: none;
+         align-items: center;
+         gap: 8px;
+       ">
+    <!-- сюда telegram-login.js вставит аватар и имя -->
+  </div>
 
+  <!-- 4. Скрипт с обработчиком onTelegramAuth -->
+  <script src="telegram-login.js"></script>
 </body>
 </html>
