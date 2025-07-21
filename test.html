@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+  <div id="telegram-login"></div>
+
+  <script async src="https://telegram.org/js/telegram-widget.js?15"
+          data-telegram-login="KotvSapoge_bot"
+          data-size="large"
+          data-userpic="true"
+          data-onauth="onTelegramAuth(user)"
+          data-request-access="write">
+  </script>
+
+  <script>
+    function onTelegramAuth(user) {
+      alert("Привет, " + user.first_name);
+    }
+  </script>
+</body>
+</html>
