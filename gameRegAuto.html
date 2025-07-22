@@ -281,34 +281,25 @@
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-#auth-submit, #auth-cancel {
-  margin-top: 10px;      /* Отступ сверху, чтобы кнопки не были вплотную */
-  padding: 10px 20px;    /* Чтобы кнопки были удобного размера */
-  font-size: 16px;       /* Увеличим размер шрифта */
-  border-radius: 6px;    /* Скруглим углы */
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.3s ease;
+#user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
 }
 
-#auth-submit {
-  background-color: #28a745;   /* Синий цвет */
-  color: white;
+#user-info img {
+  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 5px;
 }
-
-#auth-submit:hover {
-  background-color: #218838;
-}
-
-#auth-cancel {
-  background-color: #555;       /* Серый */
-  color: white;
-}
-
-#auth-cancel:hover {
-  background-color: #333;
-}
-
 
 </style>
 
@@ -343,6 +334,7 @@
 </style>
 
 <script>
+  let database;
 
 window.addEventListener('DOMContentLoaded', () => {
   const firebaseConfig = {
@@ -356,8 +348,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  window.db = db;
+  database = firebase.database();
 });
 </script>
 </head>
@@ -703,6 +694,8 @@ class Rocket {
   function startGame() {
     startTime = performance.now();
     skinSelect.style.display = 'none';
+    document.getElementById("telegram-login").style.display = "none";
+    document.getElementById("user-info").style.display = "none";
     document.getElementById('leaderboard').style.display = 'none';
     abilitiesDiv.style.display = 'flex';
     backToSiteBtn.style.display = 'block';
@@ -739,7 +732,8 @@ async function gameOver() {
   message.style.display = 'block';
   document.getElementById('keyBindSettings').classList.remove('hidden');
   document.getElementById('keyBindSettings').style.display = 'block';
-  onGameEnd();
+      document.getElementById("telegram-login").style.display = "block";
+    document.getElementById("user-info").style.display = "block";
   try {
     await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
     document.getElementById('leaderboard').style.display = 'block';
@@ -751,7 +745,6 @@ async function gameOver() {
 }
 
 restartBtn.onclick = async () => {
-  onGameStart();
   document.getElementById('keyBindSettings').classList.remove('hidden');
   message.style.display = 'none';
   leaderboard.style.display = 'none';  // скрываем таблицу перед стартом
@@ -1127,7 +1120,7 @@ function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
   document.getElementById("leaderboard-list").innerHTML = "";
 
-  const scoresRef = db.ref("scores");
+  const scoresRef = database.ref("scores");
   scoresRef.once("value", (snapshot) => {
     const scores = [];
     snapshot.forEach((childSnapshot) => {
@@ -1180,7 +1173,7 @@ window.addEventListener('DOMContentLoaded', () => {
 <script>
 
 function saveScore(name, score) {
-  const scoresRef = db.ref("scores");
+  const scoresRef = database.ref("scores");
   const newScoreRef = scoresRef.push();
   newScoreRef.set({
     name: name,
@@ -1192,9 +1185,9 @@ function saveScore(name, score) {
 window.addEventListener("DOMContentLoaded", () => {
   const user = JSON.parse(localStorage.getItem("tg_user"));
   if (user) {
-    onTelegramAuth(user);
+    showUser(user);
 
-    db.ref("users/" + user.id).once("value").then(snapshot => {
+    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
       const data = snapshot.val();
       if (data) {
         // Если хочешь, можешь использовать data.highscore и data.totalScore
