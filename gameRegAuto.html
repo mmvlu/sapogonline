@@ -1311,18 +1311,18 @@ function loadLeaderboard() {
         nameDiv.appendChild(medalSpan);
         nameDiv.appendChild(nickSpan);
 
-        // Правая часть: очки
-        const scoreSpan = document.createElement("span");
-const displayScore = showTotalScore
-  ? (user.totalScore || 0)
-  : (user.highscore || 0);
-scoreSpan.textContent = displayScore;
-        scoreSpan.style.color = "#8bc34a";
-        scoreSpan.style.lineHeight = "1";
+  // Правая часть: очки
+  const scoreSpan = document.createElement("span");
+  const displayScore = showTotalScore
+    ? (user.totalScore || 0)
+    : (user.highscore || 0);
+  scoreSpan.textContent = displayScore;
+  scoreSpan.style.color = "#8bc34a";
+  scoreSpan.style.lineHeight = "1";
 
-        // Вставляем левую и правую часть в li
-        li.appendChild(nameDiv);
-        li.appendChild(scoreSpan);
+  li.appendChild(nameDiv);
+  li.appendChild(scoreSpan);
+  leaderboardList.appendChild(li);
 
         leaderboardList.appendChild(li);
       });
@@ -1340,6 +1340,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // Показываем блок таблицы лидеров при загрузке страницы
   const leaderboard = document.getElementById("leaderboard");
   if (leaderboard) leaderboard.style.display = "block";
+
+  const toggleBtn = document.getElementById("leaderboardToggle");
+toggleBtn.addEventListener("click", () => {
+  showTotalScore = !showTotalScore;
+  toggleBtn.textContent = showTotalScore ? "Общая" : "Топ";
+  loadLeaderboard();
+});
 
   // Загружаем данные таблицы из Firebase
   loadLeaderboard();
