@@ -462,6 +462,10 @@ if (savedNick) {
   <label>Лазер: <input type="text" id="bindLaser" maxlength="1" /></label>
   <label>Ракеты: <input type="text" id="bindRocket" maxlength="1" /></label>
   <label>Реарм: <input type="text" id="bindRearm" maxlength="1" /></label>
+  <label style="display:flex;align-items:center;gap:6px;margin-top:10px;color:#fff;">
+    <input type="checkbox" id="movementToggle" checked>
+    Движение за курсором
+  </label>
   <small>Нажмите на поле и выберите клавишу</small>
 
   <div id="volumeControl" style="margin-top:15px;">
@@ -562,6 +566,10 @@ const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k
   let lastTime = 0;
   let score = 0;
   let gameRunning = false;
+  // Режимы движения
+  let followCursor = true;   // true = следуем за мышью, false = идём по ПКМ
+  let moveTarget = null;     // координаты цели для режима ПКМ
+  let showTotalScore = false;
 
   let rocketCooldown = 0;
   let rearmCooldown = 0;
@@ -1040,6 +1048,11 @@ function spawnWave() {
     else if(matchesBind(keyBinds.laser, key)) useLaser();
   });
 
+  document.getElementById("movementToggle").addEventListener("change", e => {
+  followCursor = e.target.checked;
+  moveTarget = null;  // сбрасываем цель, когда меняем режим
+});
+
   window.addEventListener('mousemove', e => {
     if(!canMoveMouse || !gameRunning) return;
     mousePos.x = e.clientX;
@@ -1107,14 +1120,30 @@ function gameLoop(ts) {
   }
 
   // Движение игрока
-  if(canMoveMouse && !rearmActive) {
-  const dx = mousePos.x - player.x;
-  const dy = mousePos.y - player.y;
-  const distToMouse = Math.hypot(dx, dy);
-  if(distToMouse > 1) {
-    const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
-    player.x += (dx / distToMouse) * moveDist;
-    player.y += (dy / distToMouse) * moveDist;
+  if (!rearmActive) {
+  let target = null;
+
+  if (followCursor) {
+    // Режим «следовать за мышью»
+    target = mousePos;
+  } else if (moveTarget) {
+    // Режим «по ПКМ»
+    target = moveTarget;
+  }
+
+  if (target) {
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 1) {
+      const moveDist = Math.min(dist, PLAYER_WALK_SPEED * dt);
+      player.x += (dx / dist) * moveDist;
+      player.y += (dy / dist) * moveDist;
+    } else if (!followCursor) {
+      // дошли до цели в режиме «ПКМ», сбрасываем
+      moveTarget = null;
+    }
   }
 }
 
@@ -1177,12 +1206,34 @@ function gameLoop(ts) {
 }
 
   function initCanvas() {
-    canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-    ctx = canvas.getContext('2d');
-    resize();
-    window.addEventListener('resize', resize);
-  }
+  // Создаём холст и контекст
+  canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  ctx = canvas.getContext('2d');
+
+  // Обработчик перемещения мыши (если ещё нет)
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mousePos.x = e.clientX - rect.left;
+    mousePos.y = e.clientY - rect.top;
+  });
+
+  // Новый код: ловим ПКМ, чтобы установить цель перемещения
+  canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (!followCursor && gameRunning) {
+      const rect = canvas.getBoundingClientRect();
+      moveTarget = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  });
+
+  // Подгоняем размер холста под окно
+  resize();
+  window.addEventListener('resize', resize);
+}
 
   function resize() {
     width = window.innerWidth;
@@ -1194,6 +1245,15 @@ function gameLoop(ts) {
 function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
   leaderboardList.innerHTML = ""; // очистить список
+
+  const maxNickLength = 15; // Максимальная длина ника
+
+  function truncateText(text, maxLength) {
+    if (text.length > maxLength) {
+      return text.slice(0, maxLength - 3) + "...";
+    }
+    return text;
+  }
 
   const usersRef = database.ref("users");
   usersRef.once("value")
@@ -1229,6 +1289,8 @@ function loadLeaderboard() {
         nameDiv.style.display = "flex";
         nameDiv.style.alignItems = "center"; // Центрируем медаль и ник по высоте
         nameDiv.style.gap = "6px";            // Отступ между медалью и ником
+        nameDiv.style.flexGrow = "1";
+        nameDiv.style.marginRight = "20px";  // Отступ справа для расстояния между ником и счетом
 
         // Медали для топ-3
         let medal = "";
@@ -1244,14 +1306,17 @@ function loadLeaderboard() {
         medalSpan.style.verticalAlign = "middle";
 
         const nickSpan = document.createElement("span");
-        nickSpan.textContent = user.nickname || "Без ника";
+        nickSpan.textContent = truncateText(user.nickname || "Без ника", maxNickLength);
 
         nameDiv.appendChild(medalSpan);
         nameDiv.appendChild(nickSpan);
 
         // Правая часть: очки
         const scoreSpan = document.createElement("span");
-        scoreSpan.textContent = user.highscore;
+const displayScore = showTotalScore
+  ? (user.totalScore || 0)
+  : (user.highscore || 0);
+scoreSpan.textContent = displayScore;
         scoreSpan.style.color = "#8bc34a";
         scoreSpan.style.lineHeight = "1";
 
@@ -1340,6 +1405,10 @@ window.addEventListener("DOMContentLoaded", () => {
   const leaderboardBlock = document.getElementById("leaderboard");
   if (leaderboardBlock) leaderboardBlock.style.display = "block";
 
+  document.getElementById("leaderboardToggle").addEventListener("click", () => {
+  showTotalScore = !showTotalScore;
+  // Меняем текст кнопки
+  document.getElementById("leaderboardToggle").textContent = showTotalScore ? "Общая" : "Топ"
   // Загружаем данные лидеров
   loadLeaderboard();
 
@@ -1351,14 +1420,25 @@ window.addEventListener("DOMContentLoaded", () => {
   bottom: 20px;
   background: #1e1e1e;
   border-radius: 10px;
-  padding: 15px;
+  padding: 15px 20px;
   color: #8bc34a;
   font-size: 0.9rem;
   max-width: 240px;
   z-index: 1000;
   display: none;
 ">
-  <h3 style="margin-top: 0; font-size: 1.1rem;">🏆 Лидеры</h3>
+  <h3 style="margin-top: 0; font-size: 1.1rem; display:flex; align-items:center; justify-content:space-between;">
+  <span>🏆 Лидеры</span>
+  <button id="leaderboardToggle" style="
+    background: transparent;
+    border: 1px solid #8bc34a;
+    border-radius: 4px;
+    color: #8bc34a;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  ">Топ</button>
+</h3>
   <ul id="leaderboard-list" style="list-style: none; padding-left: 0; margin: 0;"></ul>
 </div>
 
