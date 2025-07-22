@@ -1191,8 +1191,7 @@ function gameLoop(ts) {
     canvas.height = height;
   }
 
-function loadLeaderboard() {
-  async function loadLeaderboard() {
+async function loadLeaderboard() {
   const leaderboardDiv = document.getElementById('leaderboard');
   leaderboardDiv.innerHTML = '<h2>Таблица лидеров</h2>';
 
@@ -1200,13 +1199,11 @@ function loadLeaderboard() {
     const usersSnapshot = await database.ref('users').once('value');
     const usersData = usersSnapshot.val() || {};
 
-    // Преобразуем объект в массив и фильтруем только тех, у кого есть nickname и highscore
     const leaderboardData = Object.values(usersData)
       .filter(user => user.nickname && typeof user.highscore === 'number')
       .sort((a, b) => b.highscore - a.highscore)
       .slice(0, 10); // топ 10
 
-    // Строим HTML
     const table = document.createElement('table');
     table.innerHTML = `
       <tr>
@@ -1246,7 +1243,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-}();
+})();
 </script>
 
 <script>
