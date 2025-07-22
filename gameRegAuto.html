@@ -1192,56 +1192,45 @@ function gameLoop(ts) {
   }
 
 async function loadLeaderboard() {
-  const leaderboardDiv = document.getElementById('leaderboard');
-  leaderboardDiv.innerHTML = '<h2>Таблица лидеров</h2>';
+  const leaderboardList = document.getElementById("leaderboard-list");
+  leaderboardList.innerHTML = ""; // очистка списка
 
   try {
-    const usersSnapshot = await database.ref('users').once('value');
+    const usersSnapshot = await database.ref("users").once("value");
     const usersData = usersSnapshot.val() || {};
 
     const leaderboardData = Object.values(usersData)
-      .filter(user => user.nickname && typeof user.highscore === 'number')
+      .filter(user => user.nickname && typeof user.highscore === "number")
       .sort((a, b) => b.highscore - a.highscore)
-      .slice(0, 10); // топ 10
-
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <tr>
-        <th>#</th>
-        <th>Ник</th>
-        <th>Лучший счёт</th>
-      </tr>
-    `;
+      .slice(0, 10);
 
     leaderboardData.forEach((user, index) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${user.nickname}</td>
-        <td>${user.highscore}</td>
-      `;
-      table.appendChild(row);
-    });
+      const li = document.createElement("li");
+      li.style.marginBottom = "6px";
+      li.style.fontWeight = "bold";
+      li.style.fontSize = "0.9rem";
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
 
-    leaderboardDiv.appendChild(table);
+      // Можно добавить эмодзи медалей для топ-3:
+      let medal = "";
+      if (index === 0) medal = "🥇 ";
+      else if (index === 1) medal = "🥈 ";
+      else if (index === 2) medal = "🥉 ";
+
+      li.textContent = `${medal}${user.nickname}`;
+      const scoreSpan = document.createElement("span");
+      scoreSpan.textContent = user.highscore;
+      scoreSpan.style.color = "#8bc34a";
+
+      li.appendChild(scoreSpan);
+      leaderboardList.appendChild(li);
+    });
   } catch (error) {
-    console.error('Ошибка загрузки таблицы лидеров:', error);
-    leaderboardDiv.innerHTML += '<p>Не удалось загрузить таблицу лидеров.</p>';
+    console.error("Ошибка загрузки таблицы лидеров:", error);
+    leaderboardList.innerHTML = '<li style="color:red;">Не удалось загрузить таблицу лидеров.</li>';
   }
 }
-
-  loadSkins();
-initCanvas();
-
-window.addEventListener('DOMContentLoaded', () => {
-  // Показываем блок таблицы лидеров при загрузке страницы
-  const leaderboard = document.getElementById("leaderboard");
-  if (leaderboard) leaderboard.style.display = "block";
-
-  // Загружаем данные таблицы из Firebase
-  loadLeaderboard();
-});
-
 
 })();
 </script>
