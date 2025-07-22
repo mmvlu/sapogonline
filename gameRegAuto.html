@@ -1232,20 +1232,37 @@ function saveScore(name, score) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  const userStr = localStorage.getItem("tgUser"); // используем один ключ tgUser
-  if (userStr) {
-    const user = JSON.parse(userStr);
-    onTelegramAuth(user); // или showUser(user), если есть такая функция
+  const userStr = localStorage.getItem("tg_user");
 
-    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        console.log("Загруженные очки:", data.highscore, data.totalScore);
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      onTelegramAuth(user); // Автовход
+
+      // Загрузка очков
+      if (typeof firebase !== "undefined") {
+        firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            console.log("Загруженные очки:", data.highscore, data.totalScore);
+          }
+        });
       }
-    });
+    } catch (err) {
+      console.error("Ошибка чтения tg_user:", err);
+      localStorage.removeItem("tg_user");
+    }
   } else {
-    // Если пользователя нет — показываем кнопку входа
-    document.getElementById("telegram-login").style.display = "block";
+    // Показываем Telegram-кнопку входа, если не авторизован
+    const loginBlock = document.getElementById("telegram-login");
+    if (loginBlock) loginBlock.style.display = "block";
+  }
+
+  // ✅ Подстановка кастомного ника в input
+  const customNickname = localStorage.getItem("customNickname");
+  if (customNickname) {
+    const nickInput = document.getElementById("nicknameInput");
+    if (nickInput) nickInput.value = customNickname;
   }
 });
 
@@ -1320,25 +1337,35 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Сохранить кастомный ник
-  function saveCustomNickname() {
-    const input = document.getElementById("custom-nickname");
+function saveCustomNickname() {
+    const input = document.getElementById("customNickname");
     const newNick = input.value.trim();
     if (newNick) {
       localStorage.setItem("customNickname", newNick);
       const nicknameSpan = document.querySelector("#user-info span");
       if (nicknameSpan) nicknameSpan.textContent = newNick;
+
+      // Автообновление поля ввода ника
+      const nickInput = document.getElementById("nicknameInput");
+      if (nickInput) nickInput.value = newNick;
+
       document.getElementById("account-menu").style.display = "none";
     }
   }
 
   // Выйти из аккаунта
-  function logout() {
-    localStorage.removeItem("customNickname");
-    localStorage.removeItem("tgUser"); // если используешь
-    document.getElementById("user-info").style.display = "none";
-    document.getElementById("account-menu").style.display = "none";
-    document.getElementById("telegram-login").style.display = "block";
+function logout() {
+  localStorage.removeItem("tg_user");
+  localStorage.removeItem("customNickname");
+
+  document.getElementById("user-menu").style.display = "none";
+  document.getElementById("telegram-login-button").style.display = "block";
+
+  const nicknameInput = document.getElementById("nicknameInput");
+  if (nicknameInput) {
+    nicknameInput.value = "";
   }
+}
 </script>
 
 </body>
