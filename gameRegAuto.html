@@ -1232,17 +1232,20 @@ function saveScore(name, score) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  const user = JSON.parse(localStorage.getItem("tg_user"));
-  if (user) {
-    showUser(user);
+  const userStr = localStorage.getItem("tgUser"); // используем один ключ tgUser
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    onTelegramAuth(user); // или showUser(user), если есть такая функция
 
     firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
       const data = snapshot.val();
       if (data) {
-        // Если хочешь, можешь использовать data.highscore и data.totalScore
         console.log("Загруженные очки:", data.highscore, data.totalScore);
       }
     });
+  } else {
+    // Если пользователя нет — показываем кнопку входа
+    document.getElementById("telegram-login").style.display = "block";
   }
 });
 
