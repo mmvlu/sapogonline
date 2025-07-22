@@ -313,20 +313,25 @@
   font-weight: bold;
 }
 
-#account-menu {
-  position: fixed;
-  bottom: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 10px;
-  z-index: 1001;
+##account-menu {
   display: none;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  position: fixed;
+  bottom: 60px;
+  left: 20px;
+  background-color: #222;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+#account-menu.show {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 #account-menu input {
@@ -1304,13 +1309,23 @@ window.addEventListener("DOMContentLoaded", () => {
 <script>
   let customNickname = localStorage.getItem("customNickname");
 
-  // Показать меню по клику на ник
-  document.getElementById("user-info").addEventListener("click", () => {
-    const menu = document.getElementById("account-menu");
-    menu.style.display = menu.style.display === "none" ? "flex" : "none";
+  const userInfo = document.getElementById("user-info");
+  const accountMenu = document.getElementById("account-menu");
+
+  // Показать/скрыть меню с анимацией
+  userInfo.addEventListener("click", () => {
+    if (accountMenu.classList.contains("show")) {
+      accountMenu.classList.remove("show");
+      setTimeout(() => accountMenu.style.display = "none", 300); // подождать анимацию
+    } else {
+      accountMenu.style.display = "flex";
+      requestAnimationFrame(() => {
+        accountMenu.classList.add("show");
+      });
+    }
   });
 
-  // Отобразить кастомный ник при старте
+  // Показать кастомный ник при загрузке
   if (customNickname) {
     const nicknameSpan = document.querySelector("#user-info span");
     if (nicknameSpan) nicknameSpan.textContent = customNickname;
@@ -1324,16 +1339,20 @@ window.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("customNickname", newNick);
       const nicknameSpan = document.querySelector("#user-info span");
       if (nicknameSpan) nicknameSpan.textContent = newNick;
-      document.getElementById("account-menu").style.display = "none";
+
+      // Скрыть меню с анимацией
+      accountMenu.classList.remove("show");
+      setTimeout(() => accountMenu.style.display = "none", 300);
     }
   }
 
-  // Выйти из аккаунта
+  // Выход из аккаунта
   function logout() {
     localStorage.removeItem("customNickname");
-    localStorage.removeItem("tgUser"); // если используешь
-    document.getElementById("user-info").style.display = "none";
-    document.getElementById("account-menu").style.display = "none";
+    localStorage.removeItem("tgUser"); // если ты сохраняешь Telegram-пользователя
+    userInfo.style.display = "none";
+    accountMenu.classList.remove("show");
+    setTimeout(() => accountMenu.style.display = "none", 300);
     document.getElementById("telegram-login").style.display = "block";
   }
 </script>
