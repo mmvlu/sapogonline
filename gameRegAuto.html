@@ -1340,7 +1340,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Сохранить кастомный ник
 function saveCustomNickname() {
-  const input = document.getElementById("nicknameInput");
+  const input = document.getElementById("nicknameinput");
   const newNick = input.value.trim();
   if (newNick) {
     // Сохраняем в localStorage
@@ -1348,15 +1348,11 @@ function saveCustomNickname() {
 
     // Обновляем ник внизу страницы
     const nicknameSpan = document.querySelector("#user-info span");
-    if (nicknameSpan) {
-      nicknameSpan.textContent = newNick;
-    }
+    if (nicknameSpan) nicknameSpan.textContent = newNick;
 
     // Подставляем в поле перед игрой (если есть)
     const nickInput = document.getElementById("nicknameInput");
-    if (nickInput) {
-      nickInput.value = newNick;
-    }
+    if (nickInput) nickInput.value = newNick;
 
     // Закрываем меню
     const accountMenu = document.getElementById("account-menu");
