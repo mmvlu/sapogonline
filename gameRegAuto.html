@@ -1260,7 +1260,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const customNickname = localStorage.getItem("customNickname");
   if (customNickname) {
     // В поле перед игрой
-    const nickInput = document.getElementById("nicknameInput");
+    const nickInput = document.getElementById("custom-nickname");
     if (nickInput) nickInput.value = customNickname;
     // Внизу страницы
     const nicknameSpan = document.querySelector("#user-info span");
@@ -1341,7 +1341,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // Сохранить кастомный ник
 function saveCustomNickname() {
   const input = document.getElementById("nicknameInput");
-  const newNick = input.value.trim();
+  const newNick = document.getElementById("custom-nickname").value;;
   if (newNick) {
     // Сохраняем в localStorage
     localStorage.setItem("customNickname", newNick);
