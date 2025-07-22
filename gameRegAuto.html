@@ -1199,8 +1199,10 @@ async function loadLeaderboard() {
     const usersSnapshot = await database.ref("users").once("value");
     const usersData = usersSnapshot.val() || {};
 
+    console.log('Данные пользователей из Firebase:', usersData); // для отладки
+
     const leaderboardData = Object.values(usersData)
-      .filter(user => user.nickname && typeof user.highscore === "number")
+      .filter(user => (user.nickname || user.first_name) && typeof user.highscore === "number")
       .sort((a, b) => b.highscore - a.highscore)
       .slice(0, 10);
 
@@ -1212,13 +1214,14 @@ async function loadLeaderboard() {
       li.style.display = "flex";
       li.style.justifyContent = "space-between";
 
-      // Можно добавить эмодзи медалей для топ-3:
       let medal = "";
       if (index === 0) medal = "🥇 ";
       else if (index === 1) medal = "🥈 ";
       else if (index === 2) medal = "🥉 ";
 
-      li.textContent = `${medal}${user.nickname}`;
+      const displayName = user.nickname || user.first_name || "Без имени";
+      li.textContent = `${medal}${displayName}`;
+
       const scoreSpan = document.createElement("span");
       scoreSpan.textContent = user.highscore;
       scoreSpan.style.color = "#8bc34a";
