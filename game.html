@@ -281,34 +281,75 @@
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-#auth-submit, #auth-cancel {
-  margin-top: 10px;      /* Отступ сверху, чтобы кнопки не были вплотную */
-  padding: 10px 20px;    /* Чтобы кнопки были удобного размера */
-  font-size: 16px;       /* Увеличим размер шрифта */
-  border-radius: 6px;    /* Скруглим углы */
-  cursor: pointer;
+#telegram-login {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  text-align: center;
+}
+
+#user-info {
+  position: fixed;
+  bottom: 20px;           /* отступ от низа */
+  left: 50%;              /* по центру */
+  transform: translateX(-50%);
+  display: none;          /* по умолчанию скрыт */
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 8px;
+  z-index: 1000;
+}
+#user-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+#user-info span {
+  color: #fff;
+  font-weight: bold;
+}
+
+#account-menu {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 1001;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+#account-menu input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #333;
+  color: #fff;
+  width: 160px;
+}
+
+#account-menu button {
+  background: #555;
+  color: white;
   border: none;
-  transition: background-color 0.3s ease;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-#auth-submit {
-  background-color: #28a745;   /* Синий цвет */
-  color: white;
+#account-menu button:hover {
+  background: #777;
 }
-
-#auth-submit:hover {
-  background-color: #218838;
-}
-
-#auth-cancel {
-  background-color: #555;       /* Серый */
-  color: white;
-}
-
-#auth-cancel:hover {
-  background-color: #333;
-}
-
 
 </style>
 
@@ -358,51 +399,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   firebase.initializeApp(firebaseConfig);
   database = firebase.database();
-
-  const authBlock = document.getElementById('auth-block');
-  const authContainer = document.getElementById('auth-container');
-  const authTitle = document.getElementById('auth-title');
-  const authPasswordInput = document.getElementById('auth-password');
-  const authMessage = document.getElementById('auth-message');
-  const authCancelBtn = document.getElementById('auth-cancel');
-
-  const userBlock = document.getElementById('user-block');
-  const userNicknameSpan = document.getElementById('user-nickname');
-  const btnLogout = document.getElementById('btn-logout');
-
-  const btnLogin = document.getElementById('btn-login');
-  const btnRegister = document.getElementById('btn-register');
-
-  let currentUser = null;
-  let currentAuthMode = 'login';
-
-window.updateUserUI = function() {
-  authContainer.style.display = 'none';
-  authBlock.style.display = 'none';
-  userNicknameSpan.textContent = currentUser; // ник возле кнопки "Выйти"
-  userBlock.style.display = 'flex';
-  authMessage.textContent = '';
-
-  const nickInput = document.getElementById('nicknameInput');
-  if (nickInput) {
-    nickInput.value = currentUser;
-  }
-};
-
-  window.onGameEnd = function() {
-    if (currentUser) {
-    userBlock.style.display = 'flex';
-    authBlock.style.display = 'none';
-  } else {
-    authBlock.style.display = 'flex';
-    userBlock.style.display = 'none';
-  }
-  authContainer.style.display = 'none'; // модалка скрыта
-  };
 });
 </script>
-
 </head>
+
 <body>
 <div id="gameContainer"></div>
 
@@ -462,6 +462,10 @@ if (savedNick) {
   <label>Лазер: <input type="text" id="bindLaser" maxlength="1" /></label>
   <label>Ракеты: <input type="text" id="bindRocket" maxlength="1" /></label>
   <label>Реарм: <input type="text" id="bindRearm" maxlength="1" /></label>
+  <label style="display:flex;align-items:center;gap:6px;margin-top:10px;color:#fff;">
+    <input type="checkbox" id="movementToggle" checked>
+    Движение за курсором
+  </label>
   <small>Нажмите на поле и выберите клавишу</small>
 
   <div id="volumeControl" style="margin-top:15px;">
@@ -562,6 +566,10 @@ const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k
   let lastTime = 0;
   let score = 0;
   let gameRunning = false;
+  // Режимы движения
+  let followCursor = true;   // true = следуем за мышью, false = идём по ПКМ
+  let moveTarget = null;     // координаты цели для режима ПКМ
+  let showTotalScore = false;
 
   let rocketCooldown = 0;
   let rearmCooldown = 0;
@@ -744,6 +752,8 @@ class Rocket {
   function startGame() {
     startTime = performance.now();
     skinSelect.style.display = 'none';
+    document.getElementById("telegram-login").style.display = "none";
+    document.getElementById("user-info").style.display = "none";
     document.getElementById('leaderboard').style.display = 'none';
     abilitiesDiv.style.display = 'flex';
     backToSiteBtn.style.display = 'block';
@@ -780,19 +790,44 @@ async function gameOver() {
   message.style.display = 'block';
   document.getElementById('keyBindSettings').classList.remove('hidden');
   document.getElementById('keyBindSettings').style.display = 'block';
-  onGameEnd();
+  document.getElementById("user-info").style.display = "flex";
+
   try {
     await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
+
+    const userStr = localStorage.getItem('tg_user');
+    if (userStr && typeof database !== 'undefined') {
+      try {
+        const user = JSON.parse(userStr);
+        const userRef = database.ref('users/' + user.id);
+        const snap = await userRef.once('value');
+        const data = snap.val() || {};
+
+        const prevHigh = data.highscore || 0;
+        const prevTotal = data.totalScore || 0;
+        const currentScore = score; // 👈 используем напрямую
+
+        await userRef.update({
+          nickname: localStorage.getItem('playerNickname') || 'БезИмени',
+          highscore: Math.max(prevHigh, currentScore),
+          totalScore: prevTotal + currentScore,
+          lastLogin: new Date().toLocaleString('ru-RU')
+        });
+
+        console.log('Firebase: очки обновлены');
+      } catch (e) {
+        console.error('Ошибка обновления очков в Firebase:', e);
+      }
+    }
+
     document.getElementById('leaderboard').style.display = 'block';
-    loadLeaderboard();
-        // Таблица обновится автоматически, так как onValue слушает изменения
-  } catch(e) {
+    loadLeaderboard(); // автоматом подтянет новые значения
+  } catch (e) {
     console.error(e);
   }
 }
 
 restartBtn.onclick = async () => {
-  onGameStart();
   document.getElementById('keyBindSettings').classList.remove('hidden');
   message.style.display = 'none';
   leaderboard.style.display = 'none';  // скрываем таблицу перед стартом
@@ -1013,6 +1048,11 @@ function spawnWave() {
     else if(matchesBind(keyBinds.laser, key)) useLaser();
   });
 
+  document.getElementById("movementToggle").addEventListener("change", e => {
+  followCursor = e.target.checked;
+  moveTarget = null;  // сбрасываем цель, когда меняем режим
+});
+
   window.addEventListener('mousemove', e => {
     if(!canMoveMouse || !gameRunning) return;
     mousePos.x = e.clientX;
@@ -1080,14 +1120,30 @@ function gameLoop(ts) {
   }
 
   // Движение игрока
-  if(canMoveMouse && !rearmActive) {
-  const dx = mousePos.x - player.x;
-  const dy = mousePos.y - player.y;
-  const distToMouse = Math.hypot(dx, dy);
-  if(distToMouse > 1) {
-    const moveDist = Math.min(distToMouse, PLAYER_WALK_SPEED * dt);
-    player.x += (dx / distToMouse) * moveDist;
-    player.y += (dy / distToMouse) * moveDist;
+  if (!rearmActive) {
+  let target = null;
+
+  if (followCursor) {
+    // Режим «следовать за мышью»
+    target = mousePos;
+  } else if (moveTarget) {
+    // Режим «по ПКМ»
+    target = moveTarget;
+  }
+
+  if (target) {
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 1) {
+      const moveDist = Math.min(dist, PLAYER_WALK_SPEED * dt);
+      player.x += (dx / dist) * moveDist;
+      player.y += (dy / dist) * moveDist;
+    } else if (!followCursor) {
+      // дошли до цели в режиме «ПКМ», сбрасываем
+      moveTarget = null;
+    }
   }
 }
 
@@ -1150,12 +1206,34 @@ function gameLoop(ts) {
 }
 
   function initCanvas() {
-    canvas = document.createElement('canvas');
-    container.appendChild(canvas);
-    ctx = canvas.getContext('2d');
-    resize();
-    window.addEventListener('resize', resize);
-  }
+  // Создаём холст и контекст
+  canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  ctx = canvas.getContext('2d');
+
+  // Обработчик перемещения мыши (если ещё нет)
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mousePos.x = e.clientX - rect.left;
+    mousePos.y = e.clientY - rect.top;
+  });
+
+  // Новый код: ловим ПКМ, чтобы установить цель перемещения
+  canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (!followCursor && gameRunning) {
+      const rect = canvas.getBoundingClientRect();
+      moveTarget = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  });
+
+  // Подгоняем размер холста под окно
+  resize();
+  window.addEventListener('resize', resize);
+}
 
   function resize() {
     width = window.innerWidth;
@@ -1166,40 +1244,93 @@ function gameLoop(ts) {
 
 function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
-  document.getElementById("leaderboard-list").innerHTML = "";
+  leaderboardList.innerHTML = ""; // очистить список
 
-  const scoresRef = database.ref("scores");
-  scoresRef.once("value", (snapshot) => {
-    const scores = [];
-    snapshot.forEach((childSnapshot) => {
-      scores.push(childSnapshot.val());
-    });
+  const maxNickLength = 15; // Максимальная длина ника
 
-    // Создаем объект, чтобы хранить лучший результат по никнейму
-    const bestScoresMap = {};
-
-    scores.forEach(({name, score}) => {
-      if (!bestScoresMap[name] || score > bestScoresMap[name]) {
-        bestScoresMap[name] = score;
-      }
-    });
-
-    // Преобразуем объект обратно в массив для сортировки
-    const uniqueBestScores = Object.entries(bestScoresMap).map(([name, score]) => ({name, score}));
-
-    // Сортируем по убыванию результата
-    uniqueBestScores.sort((a, b) => b.score - a.score);
-
-    // Ограничиваем топ 10
-    const topScores = uniqueBestScores.slice(0, 10);
-
-    // Выводим таблицу
-    for (let i = 0; i < topScores.length; i++) {
-      const entry = document.createElement("div");
-      entry.textContent = `${i + 1}. ${topScores[i].name} — ${topScores[i].score}`;
-      leaderboardList.appendChild(entry);
+  function truncateText(text, maxLength) {
+    if (text.length > maxLength) {
+      return text.slice(0, maxLength - 3) + "...";
     }
-  });
+    return text;
+  }
+
+  const usersRef = database.ref("users");
+  usersRef.once("value")
+    .then(snapshot => {
+      const usersData = snapshot.val();
+      if (!usersData) {
+        leaderboardList.innerHTML = "<li>Данные не найдены</li>";
+        return;
+      }
+
+      // Конвертируем объект в массив, фильтруем и сортируем
+      const usersArray = Object.values(usersData)
+        .filter(user => user.nickname && typeof user.highscore === "number")
+        .sort((a, b) => b.highscore - a.highscore)
+        .slice(0, 10); // топ 10
+
+      if (usersArray.length === 0) {
+        leaderboardList.innerHTML = "<li>Нет игроков с очками</li>";
+        return;
+      }
+
+      // Создаем элементы списка с результатами
+      usersArray.forEach((user, index) => {
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.justifyContent = "space-between";
+        li.style.alignItems = "center";   // Центровка по вертикали
+        li.style.fontWeight = "bold";
+        li.style.marginBottom = "6px";
+
+        // Левая часть: медаль + ник
+        const nameDiv = document.createElement("div");
+        nameDiv.style.display = "flex";
+        nameDiv.style.alignItems = "center"; // Центрируем медаль и ник по высоте
+        nameDiv.style.gap = "6px";            // Отступ между медалью и ником
+        nameDiv.style.flexGrow = "1";
+        nameDiv.style.marginRight = "20px";  // Отступ справа для расстояния между ником и счетом
+
+        // Медали для топ-3
+        let medal = "";
+        if (index === 0) medal = "🥇";
+        else if (index === 1) medal = "🥈";
+        else if (index === 2) medal = "🥉";
+
+        const medalSpan = document.createElement("span");
+        medalSpan.textContent = medal;
+        medalSpan.style.fontSize = "1.1rem";    // Размер медали
+        medalSpan.style.lineHeight = "1";
+        medalSpan.style.display = "inline-block";
+        medalSpan.style.verticalAlign = "middle";
+
+        const nickSpan = document.createElement("span");
+        nickSpan.textContent = truncateText(user.nickname || "Без ника", maxNickLength);
+
+        nameDiv.appendChild(medalSpan);
+        nameDiv.appendChild(nickSpan);
+
+  // Правая часть: очки
+  const scoreSpan = document.createElement("span");
+  const displayScore = showTotalScore
+    ? (user.totalScore || 0)
+    : (user.highscore || 0);
+  scoreSpan.textContent = displayScore;
+  scoreSpan.style.color = "#8bc34a";
+  scoreSpan.style.lineHeight = "1";
+
+  li.appendChild(nameDiv);
+  li.appendChild(scoreSpan);
+  leaderboardList.appendChild(li);
+
+        leaderboardList.appendChild(li);
+      });
+    })
+    .catch(error => {
+      console.error("Ошибка загрузки таблицы лидеров:", error);
+      leaderboardList.innerHTML = '<li style="color:red;">Не удалось загрузить таблицу лидеров.</li>';
+    });
 }
 
   loadSkins();
@@ -1209,6 +1340,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // Показываем блок таблицы лидеров при загрузке страницы
   const leaderboard = document.getElementById("leaderboard");
   if (leaderboard) leaderboard.style.display = "block";
+
+  const toggleBtn = document.getElementById("leaderboardToggle");
+toggleBtn.addEventListener("click", () => {
+  showTotalScore = !showTotalScore;
+  toggleBtn.textContent = showTotalScore ? "Общая" : "Топ";
+  loadLeaderboard();
+});
 
   // Загружаем данные таблицы из Firebase
   loadLeaderboard();
@@ -1231,17 +1369,39 @@ function saveScore(name, score) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  const user = JSON.parse(localStorage.getItem("tg_user"));
-  if (user) {
-    showUser(user);
-
-    firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        // Если хочешь, можешь использовать data.highscore и data.totalScore
-        console.log("Загруженные очки:", data.highscore, data.totalScore);
+  // 1) Автовход по Telegram
+  const userStr = localStorage.getItem("tg_user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      onTelegramAuth(user);
+      // Подгружаем очки из Firebase
+      if (typeof firebase !== "undefined") {
+        firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            console.log("Загруженные очки:", data.highscore, data.totalScore);
+          }
+        });
       }
-    });
+    } catch {
+      localStorage.removeItem("tg_user");
+    }
+  } else {
+    // Показываем кнопку входа, если не авторизован
+    const telegramLogin = document.getElementById("telegram-login");
+    if (telegramLogin) telegramLogin.style.display = "block";
+  }
+
+  // 2) Подстановка кастомного ника в поле и в UI
+  const customNickname = localStorage.getItem("customNickname");
+  if (customNickname) {
+    // В поле перед игрой
+    const nickInput = document.getElementById("custom-nickname");
+    if (nickInput) nickInput.value = customNickname;
+    // Внизу страницы
+    const nicknameSpan = document.querySelector("#user-info span");
+    if (nicknameSpan) nicknameSpan.textContent = customNickname;
   }
 });
 
@@ -1252,8 +1412,13 @@ window.addEventListener("DOMContentLoaded", () => {
   const leaderboardBlock = document.getElementById("leaderboard");
   if (leaderboardBlock) leaderboardBlock.style.display = "block";
 
+  document.getElementById("leaderboardToggle").addEventListener("click", () => {
+  showTotalScore = !showTotalScore;
+  // Меняем текст кнопки
+  document.getElementById("leaderboardToggle").textContent = showTotalScore ? "Общая" : "Топ";
   // Загружаем данные лидеров
   loadLeaderboard();
+});
 
 </script>
 <!-- Leaderboard -->
@@ -1263,31 +1428,128 @@ window.addEventListener("DOMContentLoaded", () => {
   bottom: 20px;
   background: #1e1e1e;
   border-radius: 10px;
-  padding: 15px;
+  padding: 15px 20px;
   color: #8bc34a;
   font-size: 0.9rem;
   max-width: 240px;
   z-index: 1000;
   display: none;
 ">
-  <h3 style="margin-top: 0; font-size: 1.1rem;">🏆 Лидеры</h3>
+  <h3 style="margin-top: 0; font-size: 1.1rem; display:flex; align-items:center; justify-content:space-between;">
+  <span>🏆 Лидеры</span>
+  <button id="leaderboardToggle" style="
+    background: transparent;
+    border: 1px solid #8bc34a;
+    border-radius: 4px;
+    color: #8bc34a;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  ">Топ</button>
+</h3>
   <ul id="leaderboard-list" style="list-style: none; padding-left: 0; margin: 0;"></ul>
 </div>
 
   <!-- 1) Telegram Login Widget -->
-<div id="telegram-login" style="text-align:center; margin:20px;">
-  <script async src="https://telegram.org/js/telegram-widget.js?15"
-          data-telegram-login="KotvSapoge_bot"
-          data-size="large"
-          data-radius="12"
-          data-userpic="true"
-          data-request-access="write"
-          data-onauth="onTelegramAuth(user)">
-  </script>
+<div id="telegram-login">
+
+  <script src="telegram-login.js"></script>
+    <!-- сюда Telegram вставит кнопку -->
+    <script async src="https://telegram.org/js/telegram-widget.js?15"
+            data-telegram-login="KotvSapoge_bot"
+            data-size="large"
+            data-radius="12"
+            data-userpic="true"
+            data-request-access="write"
+            data-onauth="onTelegramAuth(user)">
+    </script>
+  </div>
+
+  <!-- 2. Контейнер для показа данных залогиненного пользователя -->
+<div id="user-info" style="cursor:pointer;">
+  <span></span>
 </div>
 
-<script src="telegram-login.js"></script>
-<div id="user-info" style="display:none; margin:20px;"></div>
+<div id="account-menu" style="display: none; flex-direction: column;">
+  <input type="text" id="custom-nickname" placeholder="Ник на сайте" />
+  <button onclick="saveCustomNickname()">Сохранить</button>
+  <button onclick="logout()">Выйти</button>
+</div>
+
+<script>
+  let customNickname = localStorage.getItem("customNickname");
+
+  // Показать меню по клику на ник
+  document.getElementById("user-info").addEventListener("click", () => {
+    const menu = document.getElementById("account-menu");
+    menu.style.display = menu.style.display === "none" ? "flex" : "none";
+  });
+
+  // Отобразить кастомный ник при старте
+  if (customNickname) {
+    const nicknameSpan = document.querySelector("#user-info span");
+    if (nicknameSpan) nicknameSpan.textContent = customNickname;
+  }
+
+  // Сохранить кастомный ник
+function saveCustomNickname() {
+  const input = document.getElementById("nicknameInput");
+  const newNick = document.getElementById("custom-nickname").value;;
+  if (newNick) {
+    // Сохраняем в localStorage
+    localStorage.setItem("customNickname", newNick);
+
+    // Обновляем ник внизу страницы
+    const nicknameSpan = document.querySelector("#user-info span");
+    if (nicknameSpan) nicknameSpan.textContent = newNick;
+
+    // Подставляем в поле перед игрой (если есть)
+    const nickInput = document.getElementById("nicknameInput");
+    if (nickInput) nickInput.value = newNick;
+
+    // Закрываем меню
+    const accountMenu = document.getElementById("account-menu");
+    if (accountMenu) {
+      accountMenu.style.display = "none";
+    }
+  } else {
+    alert("Ник не может быть пустым!");
+  }
+}
+
+  // Выйти из аккаунта
+function logout() {
+  // Чистим данные
+  localStorage.removeItem("tg_user");
+  localStorage.removeItem("customNickname");
+
+  // Скрываем инфо о пользователе
+  const userInfo = document.getElementById("user-info");
+  if (userInfo) {
+    userInfo.style.display = "none";
+    userInfo.innerHTML = "";
+  }
+
+  // Скрываем меню аккаунта
+  const accountMenu = document.getElementById("account-menu");
+  if (accountMenu) {
+    accountMenu.style.display = "none";
+  }
+
+  // Показываем кнопку входа
+  const telegramLogin = document.getElementById("telegram-login");
+  if (telegramLogin) {
+    telegramLogin.style.display = "block";
+  }
+
+  // Очищаем поле ввода ника перед игрой
+  const nicknameInput = document.getElementById("nicknameInput");
+  if (nicknameInput) {
+    nicknameInput.value = "";
+  }
+}
+
+</script>
 
 </body>
 </html>
