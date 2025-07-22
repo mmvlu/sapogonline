@@ -1192,41 +1192,45 @@ function gameLoop(ts) {
   }
 
 function loadLeaderboard() {
-  const leaderboardList = document.getElementById("leaderboard-list");
-  document.getElementById("leaderboard-list").innerHTML = "";
+  async function loadLeaderboard() {
+  const leaderboardDiv = document.getElementById('leaderboard');
+  leaderboardDiv.innerHTML = '<h2>Таблица лидеров</h2>';
 
-  const scoresRef = database.ref("scores");
-  scoresRef.once("value", (snapshot) => {
-    const scores = [];
-    snapshot.forEach((childSnapshot) => {
-      scores.push(childSnapshot.val());
+  try {
+    const usersSnapshot = await database.ref('users').once('value');
+    const usersData = usersSnapshot.val() || {};
+
+    // Преобразуем объект в массив и фильтруем только тех, у кого есть nickname и highscore
+    const leaderboardData = Object.values(usersData)
+      .filter(user => user.nickname && typeof user.highscore === 'number')
+      .sort((a, b) => b.highscore - a.highscore)
+      .slice(0, 10); // топ 10
+
+    // Строим HTML
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <tr>
+        <th>#</th>
+        <th>Ник</th>
+        <th>Лучший счёт</th>
+      </tr>
+    `;
+
+    leaderboardData.forEach((user, index) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${user.nickname}</td>
+        <td>${user.highscore}</td>
+      `;
+      table.appendChild(row);
     });
 
-    // Создаем объект, чтобы хранить лучший результат по никнейму
-    const bestScoresMap = {};
-
-    scores.forEach(({name, score}) => {
-      if (!bestScoresMap[name] || score > bestScoresMap[name]) {
-        bestScoresMap[name] = score;
-      }
-    });
-
-    // Преобразуем объект обратно в массив для сортировки
-    const uniqueBestScores = Object.entries(bestScoresMap).map(([name, score]) => ({name, score}));
-
-    // Сортируем по убыванию результата
-    uniqueBestScores.sort((a, b) => b.score - a.score);
-
-    // Ограничиваем топ 10
-    const topScores = uniqueBestScores.slice(0, 10);
-
-    // Выводим таблицу
-    for (let i = 0; i < topScores.length; i++) {
-      const entry = document.createElement("div");
-      entry.textContent = `${i + 1}. ${topScores[i].name} — ${topScores[i].score}`;
-      leaderboardList.appendChild(entry);
-    }
-  });
+    leaderboardDiv.appendChild(table);
+  } catch (error) {
+    console.error('Ошибка загрузки таблицы лидеров:', error);
+    leaderboardDiv.innerHTML += '<p>Не удалось загрузить таблицу лидеров.</p>';
+  }
 }
 
   loadSkins();
