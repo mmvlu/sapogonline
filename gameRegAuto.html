@@ -783,12 +783,37 @@ async function gameOver() {
   document.getElementById('keyBindSettings').classList.remove('hidden');
   document.getElementById('keyBindSettings').style.display = 'block';
   document.getElementById("user-info").style.display = "flex";
+
   try {
     await saveScore(localStorage.getItem('playerNickname') || 'БезИмени', score);
+
+    const userStr = localStorage.getItem('tg_user');
+    if (userStr && typeof database !== 'undefined') {
+      try {
+        const user = JSON.parse(userStr);
+        const userRef = database.ref('users/' + user.id);
+        const snap = await userRef.once('value');
+        const data = snap.val() || {};
+
+        const prevHigh = data.highscore || 0;
+        const prevTotal = data.totalScore || 0;
+        const currentScore = score; // 👈 используем напрямую
+
+        await userRef.update({
+          highscore: Math.max(prevHigh, currentScore),
+          totalScore: prevTotal + currentScore,
+          lastLogin: Date.now()
+        });
+
+        console.log('Firebase: очки обновлены');
+      } catch (e) {
+        console.error('Ошибка обновления очков в Firebase:', e);
+      }
+    }
+
     document.getElementById('leaderboard').style.display = 'block';
-    loadLeaderboard();
-        // Таблица обновится автоматически, так как onValue слушает изменения
-  } catch(e) {
+    loadLeaderboard(); // автоматом подтянет новые значения
+  } catch (e) {
     console.error(e);
   }
 }
