@@ -23,7 +23,7 @@ function onTelegramAuth(user) {
       `;
 
       // Авто-подстановка в поле ввода ника
-      const nickInput = document.getElementById("nickname-input");
+      const nickInput = document.getElementById("nicknameInput");
       if (nickInput) nickInput.value = nickname;
     }
 
