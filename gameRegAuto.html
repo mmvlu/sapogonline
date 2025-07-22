@@ -1191,49 +1191,95 @@ function gameLoop(ts) {
     canvas.height = height;
   }
 
-async function loadLeaderboard() {
+function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboard-list");
-  leaderboardList.innerHTML = ""; // очистка списка
+  leaderboardList.innerHTML = ""; // очистить список
 
-  try {
-    const usersSnapshot = await database.ref("users").once("value");
-    const usersData = usersSnapshot.val() || {};
+  const usersRef = database.ref("users");
+  usersRef.once("value")
+    .then(snapshot => {
+      const usersData = snapshot.val();
+      if (!usersData) {
+        leaderboardList.innerHTML = "<li>Данные не найдены</li>";
+        return;
+      }
 
-    console.log('Данные пользователей из Firebase:', usersData); // для отладки
+      // Конвертируем объект в массив, фильтруем и сортируем
+      const usersArray = Object.values(usersData)
+        .filter(user => user.nickname && typeof user.highscore === "number")
+        .sort((a, b) => b.highscore - a.highscore)
+        .slice(0, 10); // топ 10
 
-    const leaderboardData = Object.values(usersData)
-      .filter(user => (user.nickname || user.first_name) && typeof user.highscore === "number")
-      .sort((a, b) => b.highscore - a.highscore)
-      .slice(0, 10);
+      if (usersArray.length === 0) {
+        leaderboardList.innerHTML = "<li>Нет игроков с очками</li>";
+        return;
+      }
 
-    leaderboardData.forEach((user, index) => {
-      const li = document.createElement("li");
-      li.style.marginBottom = "6px";
-      li.style.fontWeight = "bold";
-      li.style.fontSize = "0.9rem";
-      li.style.display = "flex";
-      li.style.justifyContent = "space-between";
+      // Создаем элементы списка с результатами
+      usersArray.forEach((user, index) => {
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.justifyContent = "space-between";
+        li.style.alignItems = "center";   // Центровка по вертикали
+        li.style.fontWeight = "bold";
+        li.style.marginBottom = "6px";
 
-      let medal = "";
-      if (index === 0) medal = "🥇 ";
-      else if (index === 1) medal = "🥈 ";
-      else if (index === 2) medal = "🥉 ";
+        // Левая часть: медаль + ник
+        const nameDiv = document.createElement("div");
+        nameDiv.style.display = "flex";
+        nameDiv.style.alignItems = "center"; // Центрируем медаль и ник по высоте
+        nameDiv.style.gap = "6px";            // Отступ между медалью и ником
 
-      const displayName = user.nickname || user.first_name || "Без имени";
-      li.textContent = `${medal}${displayName}`;
+        // Медали для топ-3
+        let medal = "";
+        if (index === 0) medal = "🥇";
+        else if (index === 1) medal = "🥈";
+        else if (index === 2) medal = "🥉";
 
-      const scoreSpan = document.createElement("span");
-      scoreSpan.textContent = user.highscore;
-      scoreSpan.style.color = "#8bc34a";
+        const medalSpan = document.createElement("span");
+        medalSpan.textContent = medal;
+        medalSpan.style.fontSize = "1.1rem";    // Размер медали
+        medalSpan.style.lineHeight = "1";
+        medalSpan.style.display = "inline-block";
+        medalSpan.style.verticalAlign = "middle";
 
-      li.appendChild(scoreSpan);
-      leaderboardList.appendChild(li);
+        const nickSpan = document.createElement("span");
+        nickSpan.textContent = user.nickname || "Без ника";
+
+        nameDiv.appendChild(medalSpan);
+        nameDiv.appendChild(nickSpan);
+
+        // Правая часть: очки
+        const scoreSpan = document.createElement("span");
+        scoreSpan.textContent = user.highscore;
+        scoreSpan.style.color = "#8bc34a";
+        scoreSpan.style.lineHeight = "1";
+
+        // Вставляем левую и правую часть в li
+        li.appendChild(nameDiv);
+        li.appendChild(scoreSpan);
+
+        leaderboardList.appendChild(li);
+      });
+    })
+    .catch(error => {
+      console.error("Ошибка загрузки таблицы лидеров:", error);
+      leaderboardList.innerHTML = '<li style="color:red;">Не удалось загрузить таблицу лидеров.</li>';
     });
-  } catch (error) {
-    console.error("Ошибка загрузки таблицы лидеров:", error);
-    leaderboardList.innerHTML = '<li style="color:red;">Не удалось загрузить таблицу лидеров.</li>';
-  }
 }
+
+  loadSkins();
+initCanvas();
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Показываем блок таблицы лидеров при загрузке страницы
+  const leaderboard = document.getElementById("leaderboard");
+  if (leaderboard) leaderboard.style.display = "block";
+
+  // Загружаем данные таблицы из Firebase
+  loadLeaderboard();
+});
+
 
 })();
 </script>
