@@ -1338,34 +1338,53 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Сохранить кастомный ник
 function saveCustomNickname() {
-    const input = document.getElementById("customNickname");
-    const newNick = input.value.trim();
-    if (newNick) {
-      localStorage.setItem("customNickname", newNick);
-      const nicknameSpan = document.querySelector("#user-info span");
-      if (nicknameSpan) nicknameSpan.textContent = newNick;
+  const input = document.getElementById("customNickname");
+  const newNick = input.value.trim();
+  if (newNick) {
+    localStorage.setItem("customNickname", newNick);
 
-      // Автообновление поля ввода ника
-      const nickInput = document.getElementById("nicknameInput");
-      if (nickInput) nickInput.value = newNick;
+    const nicknameSpan = document.querySelector("#user-info span");
+    if (nicknameSpan) nicknameSpan.textContent = newNick;
 
-      document.getElementById("account-menu").style.display = "none";
-    }
+    const nickInput = document.getElementById("nicknameInput");
+    if (nickInput) nickInput.value = newNick;
+
+    const accountMenu = document.getElementById("account-menu");
+    if (accountMenu) accountMenu.style.display = "none";
+  } else {
+    alert("Ник не может быть пустым!");
   }
+}
 
   // Выйти из аккаунта
 function logout() {
+  // Удаляем данные из localStorage
   localStorage.removeItem("tg_user");
   localStorage.removeItem("customNickname");
 
-  document.getElementById("user-menu").style.display = "none";
-  document.getElementById("telegram-login-button").style.display = "block";
+  // Скрываем меню пользователя, если есть
+  const userMenu = document.getElementById("user-menu");
+  if (userMenu) userMenu.style.display = "none";
 
+  // Показываем кнопку входа через Телеграм
+  const telegramLoginBtn = document.getElementById("telegram-login-button");
+  if (telegramLoginBtn) telegramLoginBtn.style.display = "block";
+
+  // Очищаем поле ввода ника
   const nicknameInput = document.getElementById("nicknameInput");
-  if (nicknameInput) {
-    nicknameInput.value = "";
+  if (nicknameInput) nicknameInput.value = "";
+
+  // Очищаем ник в отображении user-info (если есть)
+  const userInfoSpan = document.querySelector("#user-info span");
+  if (userInfoSpan) userInfoSpan.textContent = "";
+
+  // При выходе полезно "сбросить" текущего пользователя в функции авторизации,
+  // чтобы UI обновился корректно
+  if (typeof onTelegramAuth === "function") {
+    onTelegramAuth(null);
   }
 }
+
 </script>
 
 </body>
