@@ -800,6 +800,7 @@ async function gameOver() {
         const currentScore = score; // 👈 используем напрямую
 
         await userRef.update({
+          nickname: localStorage.getItem('playerNickname') || 'БезИмени',
           highscore: Math.max(prevHigh, currentScore),
           totalScore: prevTotal + currentScore,
           lastLogin: new Date().toLocaleString('ru-RU')
