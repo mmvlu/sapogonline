@@ -1341,14 +1341,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const leaderboard = document.getElementById("leaderboard");
   if (leaderboard) leaderboard.style.display = "block";
 
-const toggleBtn = document.getElementById("leaderboardToggle");
-if (toggleBtn) {
-  toggleBtn.addEventListener("click", () => {
-    showTotalScore = !showTotalScore;
-    toggleBtn.textContent = showTotalScore ? "Общая" : "Топ";
-    loadLeaderboard();
-  });
-}
+  const toggleBtn = document.getElementById("leaderboardToggle");
+toggleBtn.addEventListener("click", () => {
+  showTotalScore = !showTotalScore;
+  toggleBtn.textContent = showTotalScore ? "Общая" : "Топ";
+  loadLeaderboard();
+});
 
   // Загружаем данные таблицы из Firebase
   loadLeaderboard();
@@ -1417,9 +1415,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("leaderboardToggle").addEventListener("click", () => {
   showTotalScore = !showTotalScore;
   // Меняем текст кнопки
-  document.getElementById("leaderboardToggle").textContent = showTotalScore ? "Общая" : "Топ"
+  document.getElementById("leaderboardToggle").textContent = showTotalScore ? "Общая" : "Топ";
   // Загружаем данные лидеров
   loadLeaderboard();
+});
 
 </script>
 <!-- Leaderboard -->
