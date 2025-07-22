@@ -802,7 +802,7 @@ async function gameOver() {
         await userRef.update({
           highscore: Math.max(prevHigh, currentScore),
           totalScore: prevTotal + currentScore,
-          lastLogin: Date.now()
+          lastLogin: new Date().toLocaleString('ru-RU')
         });
 
         console.log('Firebase: очки обновлены');
