@@ -1239,7 +1239,7 @@ function saveScore(name, score) {
 window.addEventListener("DOMContentLoaded", () => {
   const user = JSON.parse(localStorage.getItem("tg_user"));
   if (user) {
-    showUser(user);
+    onTelegramAuth(localStorage.getItem("tgUser") ? JSON.parse(localStorage.getItem("tgUser")) : null);
 
     firebase.database().ref("users/" + user.id).once("value").then(snapshot => {
       const data = snapshot.val();
