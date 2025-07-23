@@ -487,6 +487,30 @@ if (savedNick) {
   'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f', 'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l',
   'я': 'z', 'ч': 'x', 'с': 'c', 'м': 'v', 'и': 'b', 'т': 'n', 'ь': 'm'
 };
+  const MOUSE_BUTTON_NAMES = {
+  0: 'M1', // ЛКМ
+  1: 'M2', // колесико
+  2: 'M3', // ПКМ
+  3: 'M4', // назад
+  4: 'M5', // вперед
+};
+  function displayBindName(name) {
+  if (name === 'SPACE') return '␣';
+  return name;
+}
+
+function formatKeyName(e) {
+  if (e.type === 'mousedown') {
+    return MOUSE_BUTTON_NAMES[e.button] || `M${e.button+1}`;
+  }
+  // e.code: 'Space', 'KeyW', 'Digit1', 'ArrowUp', ...
+  let code = e.code.toUpperCase();        // 'SPACE', 'KEYW'...
+  if (code === 'SPACE') return 'SPACE';
+  if (code === 'CONTROLLEFT' || code === 'CONTROLRIGHT') return 'CTRL';
+  if (code.startsWith('KEY')) return code.slice(3);
+  if (code.startsWith('DIGIT')) return code.slice(5);
+  return code;                            // 'ARROWUP', 'ESCAPE' и прочие
+}
 
 function normalizeKey(key) {
   key = key.toLowerCase();
@@ -520,12 +544,12 @@ const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k
   const bindRearmInput = document.getElementById('bindRearm');
   const bindLaserInput = document.getElementById('bindLaser');
 
-  let keyBinds = {
-    dagger: localStorage.getItem('bindDagger') || 'v',
-    rocket: localStorage.getItem('bindRocket') || 'w',
-    rearm: localStorage.getItem('bindRearm') || 'r',
-    laser: localStorage.getItem('bindLaser') || 'q',
-  };
+let keyBinds = {
+  dagger: (localStorage.getItem('bindDagger') || 'v').toUpperCase(),
+  rocket: (localStorage.getItem('bindRocket') || 'w').toUpperCase(),
+  rearm:  (localStorage.getItem('bindRearm')  || 'r').toUpperCase(),
+  laser:  (localStorage.getItem('bindLaser')  || 'q').toUpperCase(),
+};
 
   function matchesBind(bind, keyPressed) {
     if (!bind) return false;
@@ -533,23 +557,37 @@ const engToRus = Object.fromEntries(Object.entries(rusToEng).map(([k,v]) => [v,k
     return keyPressed === bind || keyPressed === rusEquivalent;
   }
 
-  bindDaggerInput.value = keyBinds.dagger.toUpperCase();
-  bindRocketInput.value = keyBinds.rocket.toUpperCase();
-  bindRearmInput.value = keyBinds.rearm.toUpperCase();
-  bindLaserInput.value = keyBinds.laser.toUpperCase();
+  bindDaggerInput.value = displayBindName(keyBinds.dagger);
+  bindRocketInput.value = displayBindName(keyBinds.rocket);
+  bindRearmInput.value = displayBindName(keyBinds.rearm);
+  bindLaserInput.value = displayBindName(keyBinds.laser);
 
   function setupBindInput(input, keyName) {
-    input.addEventListener('keydown', (e) => {
+  input.addEventListener('focus', () => {
+    // единая функция для клавиатуры и мыши
+    const onInput = e => {
       e.preventDefault();
-      let k = e.key.toLowerCase();
-      if(k.length === 1 && k.match(/[a-z0-9]/)) {
-        keyBinds[keyName] = k;
-        localStorage.setItem('bind' + keyName.charAt(0).toUpperCase() + keyName.slice(1), k);
-        input.value = k.toUpperCase();
-        updateCooldownUI(); // обновить тултипы с биндами
-      }
-    });
-  }
+      const name = formatKeyName(e);
+      // 1) сохранение
+      keyBinds[keyName] = name;
+      localStorage.setItem(
+        'bind' + keyName.charAt(0).toUpperCase() + keyName.slice(1),
+        name
+      );
+      // 2) обновление UI
+      input.value = displayBindName(name);
+      updateCooldownUI();
+      // 3) снятие фокуса
+      input.blur();
+      // 4) убрать оба слушателя
+      document.removeEventListener('keydown', onInput);
+      document.removeEventListener('mousedown', onInput);
+    };
+
+    document.addEventListener('keydown', onInput, { once: true });
+    document.addEventListener('mousedown', onInput, { once: true });
+  });
+}
 
   setupBindInput(bindDaggerInput, 'dagger');
   setupBindInput(bindRocketInput, 'rocket');
@@ -1039,14 +1077,22 @@ function spawnWave() {
   laserBtn.onclick = () => { if(gameRunning) useLaser(); };
 
   window.addEventListener('keydown', e => {
-    if(!gameRunning) return;
-    if(e.repeat) return;
-    const key = normalizeKey(e.key);
-    if(matchesBind(keyBinds.dagger, key)) useDagger();
-    else if(matchesBind(keyBinds.rocket, key)) tryLaunchRockets();
-    else if(matchesBind(keyBinds.rearm, key)) tryRearm();
-    else if(matchesBind(keyBinds.laser, key)) useLaser();
-  });
+  if (!gameRunning || e.repeat) return;
+  const name = formatKeyName(e);
+  if (name === keyBinds.dagger)   useDagger();
+  else if (name === keyBinds.rocket) tryLaunchRockets();
+  else if (name === keyBinds.rearm)  tryRearm();
+  else if (name === keyBinds.laser)  useLaser();
+});
+
+window.addEventListener('mousedown', e => {
+  if (!gameRunning) return;
+  const name = formatKeyName(e);
+  if (name === keyBinds.dagger)   useDagger();
+  else if (name === keyBinds.rocket) tryLaunchRockets();
+  else if (name === keyBinds.rearm)  tryRearm();
+  else if (name === keyBinds.laser)  useLaser();
+});
 
   document.getElementById("movementToggle").addEventListener("change", e => {
   followCursor = e.target.checked;
@@ -1418,7 +1464,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("leaderboardToggle").textContent = showTotalScore ? "Общая" : "Топ";
   // Загружаем данные лидеров
   loadLeaderboard();
-});
+  });
 
 </script>
 <!-- Leaderboard -->
